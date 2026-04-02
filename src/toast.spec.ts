@@ -14,12 +14,12 @@ const flush = async () => {
 const mountedWrappers: VueWrapper[] = [];
 
 const mountToaster = (props?: Record<string, unknown>) => {
-	const wrapper = mount(Toaster, {
-		attachTo: document.body,
-		props,
-	});
-	mountedWrappers.push(wrapper);
-	return wrapper;
+    const wrapper = mount(Toaster, {
+        attachTo: document.body,
+        props,
+    });
+    mountedWrappers.push(wrapper);
+    return wrapper;
 };
 
 describe("sileo", () => {
