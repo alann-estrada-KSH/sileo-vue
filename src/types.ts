@@ -21,6 +21,11 @@ export interface SileoButton {
 	onClick?: () => void;
 }
 
+export interface SileoAutopilot {
+	expand?: number;
+	collapse?: number;
+}
+
 export const SILEO_POSITIONS = [
 	"top-left",
 	"top-center",
@@ -43,6 +48,7 @@ export interface SileoOptions {
 	styles?: SileoStyles;
 	fill?: string;
 	roundness?: number;
+	autopilot?: boolean | SileoAutopilot;
 	button?: SileoButton;
 	groupKey?: string;
 }

@@ -63,6 +63,11 @@
     animation: sileo-enter 180ms ease;
 }
 
+.sileo-toast[data-exiting="true"] {
+    animation: sileo-exit 160ms ease forwards;
+    pointer-events: none;
+}
+
 .sileo-head {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -89,6 +94,7 @@
     font-weight: 600;
     line-height: 1.25;
     text-transform: none;
+    animation: sileo-title-in 180ms ease;
 }
 
 .sileo-description {
@@ -96,6 +102,21 @@
     font-size: 13px;
     line-height: 1.35;
     color: var(--sileo-muted);
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-6px);
+    transition:
+        max-height 260ms ease,
+        opacity 210ms ease,
+        transform 260ms ease;
+}
+
+.sileo-toast[data-expanded="true"] .sileo-description {
+    max-height: 160px;
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 90ms;
 }
 
 .sileo-dismiss,
@@ -161,8 +182,36 @@
     }
 }
 
+@keyframes sileo-title-in {
+    from {
+        opacity: 0;
+        transform: translateY(-2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes sileo-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.97);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sileo-toast {
         animation: none;
+    }
+
+    .sileo-description {
+        transition: none;
     }
 }

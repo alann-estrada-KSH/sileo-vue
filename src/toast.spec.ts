@@ -31,9 +31,14 @@ describe("sileo", () => {
 
     afterEach(() => {
         for (const wrapper of mountedWrappers.splice(0)) {
-            wrapper.unmount();
+            try {
+                wrapper.unmount();
+            } catch {
+                // JSDOM + Teleport can already detach nodes between assertions/cleanup.
+            }
         }
         sileo.clear();
+        document.body.innerHTML = "";
         vi.useRealTimers();
     });
 
@@ -167,6 +172,39 @@ describe("sileo", () => {
         await flush();
 
         expect(document.querySelector(".custom-icon")?.textContent).toBe("!");
+    });
+
+    it("renders default state icon as svg, not state text", async () => {
+        mountToaster();
+        sileo.success({ title: "Saved", duration: null });
+        await flush();
+
+        const badge = document.querySelector("[data-sileo-badge='true']");
+        expect(badge?.querySelector("svg")).not.toBeNull();
+        expect((badge?.textContent ?? "").trim().toLowerCase()).not.toBe("success");
+    });
+
+    it("autopilot expands then collapses description", async () => {
+        vi.useFakeTimers();
+        mountToaster();
+        sileo.info({
+            title: "Timeline",
+            description: "Animated",
+            duration: 5000,
+            autopilot: { expand: 50, collapse: 300 },
+        });
+
+        await flush();
+        const toast = document.querySelector("[data-sileo-toast='true']");
+        expect(toast?.getAttribute("data-expanded")).toBe("false");
+
+        vi.advanceTimersByTime(70);
+        await flush();
+        expect(toast?.getAttribute("data-expanded")).toBe("true");
+
+        vi.advanceTimersByTime(300);
+        await flush();
+        expect(toast?.getAttribute("data-expanded")).toBe("false");
     });
 
     it("supports promise success lifecycle", async () => {
