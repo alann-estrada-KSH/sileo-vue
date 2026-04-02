@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { VNodeChild } from "vue";
 
 export type SileoState =
 	| "success"
@@ -13,11 +13,12 @@ export interface SileoStyles {
 	description?: string;
 	badge?: string;
 	button?: string;
+	toast?: string;
 }
 
 export interface SileoButton {
 	title: string;
-	onClick: () => void;
+	onClick?: () => void;
 }
 
 export const SILEO_POSITIONS = [
@@ -32,15 +33,21 @@ export const SILEO_POSITIONS = [
 export type SileoPosition = (typeof SILEO_POSITIONS)[number];
 
 export interface SileoOptions {
+	id?: string;
 	title?: string;
-	description?: ReactNode | string;
+	description?: VNodeChild | string;
 	type?: SileoState;
 	position?: SileoPosition;
 	duration?: number | null;
-	icon?: ReactNode | null;
+	icon?: VNodeChild | null;
 	styles?: SileoStyles;
 	fill?: string;
 	roundness?: number;
-	autopilot?: boolean | { expand?: number; collapse?: number };
 	button?: SileoButton;
+	groupKey?: string;
 }
+
+export type SileoOffsetValue = number | string;
+export type SileoOffsetConfig = Partial<
+	Record<"top" | "right" | "bottom" | "left", SileoOffsetValue>
+>;
