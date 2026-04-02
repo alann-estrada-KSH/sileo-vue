@@ -280,7 +280,7 @@ const renderStateIcon = (state: SileoState) => {
         ]);
     }
     if (state === "loading") {
-        return h("svg", common, [
+        return h("svg", { ...common, "data-sileo-icon": "spin" }, [
             h("circle", {
                 cx: "8",
                 cy: "8",
@@ -434,6 +434,7 @@ export const Toaster = defineComponent({
         const expandedGroups = ref<Record<string, boolean>>({});
         const expandedToasts = ref<Record<string, boolean>>({});
         const autopilotTimers = new Map<string, ReturnType<typeof setTimeout>[]>();
+        const activeToastInstanceId = ref<string | undefined>(undefined);
 
         const setExpanded = (instanceId: string, expanded: boolean) => {
             expandedToasts.value[instanceId] = expanded;
@@ -450,6 +451,14 @@ export const Toaster = defineComponent({
             clearAutopilotTimers(item.instanceId);
             const config = normalizeAutopilot(item.autopilot);
             if (!item.description || !config) {
+                setExpanded(item.instanceId, false);
+                return;
+            }
+
+            if (
+                activeToastInstanceId.value !== undefined &&
+                activeToastInstanceId.value !== item.instanceId
+            ) {
                 setExpanded(item.instanceId, false);
                 return;
             }
@@ -535,12 +544,20 @@ export const Toaster = defineComponent({
             () => toasts.value,
             (items) => {
                 const active = new Set(items.map((item) => item.instanceId));
+                const latest = [...items]
+                    .filter((item) => !item.exiting)
+                    .sort((a, b) => b.createdAt - a.createdAt)[0];
+
+                activeToastInstanceId.value = latest?.instanceId;
 
                 for (const item of items) {
                     if (expandedToasts.value[item.instanceId] === undefined) {
                         setExpanded(item.instanceId, false);
-                        scheduleAutopilot(item);
                     }
+                }
+
+                for (const item of items) {
+                    scheduleAutopilot(item);
                 }
 
                 for (const instanceId of Object.keys(expandedToasts.value)) {
@@ -551,6 +568,23 @@ export const Toaster = defineComponent({
                 }
             },
             { immediate: true },
+        );
+
+        watch(
+            () => activeToastInstanceId.value,
+            (activeInstanceId) => {
+                for (const instanceId of Object.keys(expandedToasts.value)) {
+                    if (instanceId !== activeInstanceId) {
+                        setExpanded(instanceId, false);
+                    }
+                }
+
+                if (!activeInstanceId) return;
+                const item = toasts.value.find((toast) => toast.instanceId === activeInstanceId);
+                if (item) {
+                    scheduleAutopilot(item);
+                }
+            },
         );
 
         const groupedByPosition = computed(() => {
@@ -570,6 +604,7 @@ export const Toaster = defineComponent({
         const renderToast = (item: SileoItem) => {
             const roundness = `${Math.max(0, item.roundness ?? DEFAULT_ROUNDNESS)}px`;
             const isExpanded = Boolean(expandedToasts.value[item.instanceId]);
+            const contentVisible = isExpanded && item.state !== "loading";
             return h(
                 "article",
                 {
@@ -583,9 +618,16 @@ export const Toaster = defineComponent({
                         "--sileo-fill": item.fill,
                         "--sileo-roundness": roundness,
                     } as CSSProperties,
-                    onMouseenter: () => setExpanded(item.instanceId, true),
+                    onMouseenter: () => {
+                        activeToastInstanceId.value = item.instanceId;
+                        setExpanded(item.instanceId, true);
+                    },
                     onMouseleave: () => {
                         const autopilot = normalizeAutopilot(item.autopilot);
+                        const latest = [...toasts.value]
+                            .filter((toast) => !toast.exiting)
+                            .sort((a, b) => b.createdAt - a.createdAt)[0];
+                        activeToastInstanceId.value = latest?.instanceId;
                         if (autopilot !== null) setExpanded(item.instanceId, false);
                     },
                 },
@@ -618,30 +660,42 @@ export const Toaster = defineComponent({
                             "x",
                         ),
                     ]),
-                    item.description
+                    item.description || item.button
                         ? h(
                             "div",
                             {
-                                class: ["sileo-description", item.styles?.description],
-                                "data-sileo-description": "true",
+                                class: "sileo-content",
+                                "data-sileo-content": "true",
+                                "data-visible": contentVisible ? "true" : "false",
                             },
-                            [item.description],
-                        )
-                        : null,
-                    item.button
-                        ? h(
-                            "button",
-                            {
-                                type: "button",
-                                class: ["sileo-action", item.styles?.button],
-                                "data-sileo-button": "true",
-                                onClick: (e: MouseEvent) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    item.button?.onClick?.();
-                                },
-                            },
-                            item.button.title,
+                            [
+                                item.description
+                                    ? h(
+                                        "div",
+                                        {
+                                            class: ["sileo-description", item.styles?.description],
+                                            "data-sileo-description": "true",
+                                        },
+                                        [item.description],
+                                    )
+                                    : null,
+                                item.button
+                                    ? h(
+                                        "button",
+                                        {
+                                            type: "button",
+                                            class: ["sileo-action", item.styles?.button],
+                                            "data-sileo-button": "true",
+                                            onClick: (e: MouseEvent) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                item.button?.onClick?.();
+                                            },
+                                        },
+                                        item.button.title,
+                                    )
+                                    : null,
+                            ],
                         )
                         : null,
                 ],
