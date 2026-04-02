@@ -50,7 +50,7 @@ const store = {
     },
 };
 
-const dismissalTimers = new Map<string, number>();
+const dismissalTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let sequence = 0;
 
 const nextId = () => `sileo-${++sequence}-${Date.now().toString(36)}`;
@@ -82,7 +82,7 @@ const dismissByInstance = (instanceId: string) => {
         ),
     );
 
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
         removeByInstance(instanceId);
     }, EXIT_DURATION);
 };
@@ -93,7 +93,7 @@ const scheduleDismiss = (item: SileoItem) => {
     const duration = item.duration ?? DEFAULT_TOAST_DURATION;
     if (duration <= 0) return;
 
-    const timer = window.setTimeout(() => {
+    const timer = globalThis.setTimeout(() => {
         dismissByInstance(item.instanceId);
     }, duration);
 
@@ -181,6 +181,7 @@ const clearToasts = (position?: SileoPosition) => {
 const resolveTheme = (theme: "light" | "dark" | "system" | undefined) => {
     if (theme === "light" || theme === "dark") return theme;
     if (typeof window === "undefined") return "light";
+    if (typeof window.matchMedia !== "function") return "light";
     return window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
@@ -370,7 +371,11 @@ export const Toaster = defineComponent({
                 },
                 [
                     h("div", { class: "sileo-head" }, [
-                        h("span", { class: ["sileo-badge", item.styles?.badge] }, item.state),
+                        h(
+                            "span",
+                            { class: ["sileo-badge", item.styles?.badge] },
+                            item.icon ?? item.state,
+                        ),
                         h("p", { class: ["sileo-title", item.styles?.title] }, item.title),
                         h(
                             "button",
@@ -410,31 +415,56 @@ export const Toaster = defineComponent({
         };
 
         const renderPosition = (position: SileoPosition, items: SileoItem[]) => {
-            const visible = items.filter((item) => !item.exiting);
-            const shouldGroup =
-                props.grouping &&
-                visible.length > props.groupThreshold &&
-                !expandedGroups.value[position];
+            const buckets = new Map<string, SileoItem[]>();
+            for (const item of items) {
+                const key = item.groupKey ?? "__default__";
+                const list = buckets.get(key);
+                if (list) {
+                    list.push(item);
+                } else {
+                    buckets.set(key, [item]);
+                }
+            }
 
-            const children = shouldGroup
-                ? [
-                    h(
-                        "button",
-                        {
-                            type: "button",
-                            "data-sileo-group": "true",
-                            class: "sileo-group",
-                            onMouseenter: () => {
-                                expandedGroups.value[position] = true;
+            const children: ReturnType<typeof h>[] = [];
+            for (const [bucketKey, bucketItems] of buckets) {
+                const visible = bucketItems.filter((item) => !item.exiting);
+                const expandKey = `${position}:${bucketKey}`;
+                const shouldGroup =
+                    props.grouping &&
+                    visible.length > props.groupThreshold &&
+                    !expandedGroups.value[expandKey];
+
+                if (shouldGroup) {
+                    const label =
+                        bucketKey === "__default__"
+                            ? `${visible.length} notifications`
+                            : `${visible.length} ${bucketKey} notifications`;
+                    children.push(
+                        h(
+                            "button",
+                            {
+                                key: expandKey,
+                                type: "button",
+                                "data-sileo-group": "true",
+                                class: "sileo-group",
+                                onMouseenter: () => {
+                                    expandedGroups.value[expandKey] = true;
+                                },
+                                onClick: () => {
+                                    expandedGroups.value[expandKey] = true;
+                                },
                             },
-                            onClick: () => {
-                                expandedGroups.value[position] = true;
-                            },
-                        },
-                        `${visible.length} notifications`,
-                    ),
-                ]
-                : items.map((item) => renderToast(item));
+                            label,
+                        ),
+                    );
+                    continue;
+                }
+
+                for (const item of bucketItems) {
+                    children.push(renderToast(item));
+                }
+            }
 
             return h(
                 "section",

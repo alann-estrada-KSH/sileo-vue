@@ -1,12 +1,25 @@
 import { mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { h } from "vue";
+import { h, nextTick } from "vue";
+import type { VueWrapper } from "@vue/test-utils";
 import { EXIT_DURATION } from "./constants";
 import { Toaster, sileo } from "./toast";
 
 const flush = async () => {
     await Promise.resolve();
     await Promise.resolve();
+    await nextTick();
+};
+
+const mountedWrappers: VueWrapper[] = [];
+
+const mountToaster = (props?: Record<string, unknown>) => {
+	const wrapper = mount(Toaster, {
+		attachTo: document.body,
+		props,
+	});
+	mountedWrappers.push(wrapper);
+	return wrapper;
 };
 
 describe("sileo", () => {
@@ -17,12 +30,15 @@ describe("sileo", () => {
     });
 
     afterEach(() => {
+        for (const wrapper of mountedWrappers.splice(0)) {
+            wrapper.unmount();
+        }
         sileo.clear();
         vi.useRealTimers();
     });
 
     it("stacks unnamed toasts with unique ids", async () => {
-        mount(Toaster, { attachTo: document.body });
+        mountToaster();
         sileo.info({ title: "First", duration: null });
         sileo.info({ title: "Second", duration: null });
         await flush();
@@ -32,7 +48,7 @@ describe("sileo", () => {
     });
 
     it("supports sileo.loading as standalone notification", async () => {
-        mount(Toaster, { attachTo: document.body });
+        mountToaster();
         sileo.loading({ title: "Loading data" });
         await flush();
 
@@ -41,7 +57,7 @@ describe("sileo", () => {
     });
 
     it("keeps title casing exactly as provided", async () => {
-        mount(Toaster, { attachTo: document.body });
+        mountToaster();
         sileo.info({ title: "Test data test", duration: null });
         await flush();
 
@@ -50,12 +66,9 @@ describe("sileo", () => {
     });
 
     it("supports grouped notifications when threshold is exceeded", async () => {
-        mount(Toaster, {
-            attachTo: document.body,
-            props: {
-                grouping: true,
-                groupThreshold: 2,
-            },
+        mountToaster({
+            grouping: true,
+            groupThreshold: 2,
         });
 
         sileo.info({ title: "One", duration: null });
@@ -68,16 +81,31 @@ describe("sileo", () => {
         );
     });
 
+    it("uses groupKey when grouping notifications", async () => {
+        mountToaster({
+            grouping: true,
+            groupThreshold: 1,
+        });
+
+        sileo.info({ title: "A", duration: null, groupKey: "uploads" });
+        sileo.info({ title: "B", duration: null, groupKey: "uploads" });
+        sileo.info({ title: "C", duration: null, groupKey: "billing" });
+        await flush();
+
+        const groups = Array.from(document.querySelectorAll("[data-sileo-group='true']")).map(
+            (el) => el.textContent ?? "",
+        );
+        expect(groups.some((text) => text.includes("uploads"))).toBe(true);
+        expect(groups.some((text) => text.includes("billing"))).toBe(false);
+    });
+
     it("teleports into a custom container", async () => {
         const host = document.createElement("div");
         host.id = "sileo-toaster";
         document.body.appendChild(host);
 
-        mount(Toaster, {
-            attachTo: document.body,
-            props: {
-                container: "#sileo-toaster",
-            },
+        mountToaster({
+            container: "#sileo-toaster",
         });
 
         sileo.success({ title: "Inside custom host", duration: null });
@@ -87,16 +115,11 @@ describe("sileo", () => {
     });
 
     it("does not drop configuration after remount", async () => {
-        const first = mount(Toaster, {
-            attachTo: document.body,
-            props: {
-                position: "bottom-left",
-            },
-        });
+        const first = mountToaster({ position: "bottom-left" });
         await flush();
         first.unmount();
 
-        mount(Toaster, { attachTo: document.body });
+        mountToaster();
         sileo.info({ title: "Still bottom-left", duration: null });
         await flush();
 
@@ -106,7 +129,7 @@ describe("sileo", () => {
 
     it("dismisses only the targeted instance even when id is reused", async () => {
         vi.useFakeTimers();
-        mount(Toaster, { attachTo: document.body });
+        mountToaster();
 
         sileo.info({ id: "shared", title: "First", duration: null });
         sileo.dismiss("shared");
@@ -123,7 +146,7 @@ describe("sileo", () => {
     });
 
     it("accepts VNodes in description", async () => {
-        mount(Toaster, { attachTo: document.body });
+        mountToaster();
         sileo.info({
             title: "VNode",
             description: h("strong", { class: "inline-node" }, "Rendered node"),
@@ -132,5 +155,33 @@ describe("sileo", () => {
         await flush();
 
         expect(document.querySelector(".inline-node")?.textContent).toBe("Rendered node");
+    });
+
+    it("renders custom icon when provided", async () => {
+        mountToaster();
+        sileo.success({
+            title: "Icon",
+            icon: h("em", { class: "custom-icon" }, "!"),
+            duration: null,
+        });
+        await flush();
+
+        expect(document.querySelector(".custom-icon")?.textContent).toBe("!");
+    });
+
+    it("supports promise success lifecycle", async () => {
+        mountToaster();
+
+        await sileo.promise(Promise.resolve("ok"), {
+            loading: { title: "Loading" },
+            success: (value) => ({ title: `Success ${value}`, duration: null }),
+            error: { title: "Failed", duration: null },
+        });
+        await flush();
+
+        const titles = Array.from(document.querySelectorAll(".sileo-title")).map(
+            (el) => el.textContent,
+        );
+        expect(titles).toContain("Success ok");
     });
 });
