@@ -67,6 +67,7 @@
 .sileo-toast {
     padding: 10px 12px;
     animation: sileo-enter 180ms ease;
+    touch-action: pan-x;
 }
 
 [data-sileo-viewport][data-position^="bottom"] .sileo-toast {
@@ -111,7 +112,7 @@
 }
 
 .sileo-description {
-    margin-top: 8px;
+    margin-top: 0;
     font-size: 13px;
     line-height: 1.35;
     color: var(--sileo-muted);
@@ -126,16 +127,24 @@
 }
 
 .sileo-content {
+    max-height: 0;
+    overflow: hidden;
+    pointer-events: none;
     opacity: 0;
-    transition: opacity 120ms ease;
+    transition:
+        max-height 260ms ease,
+        opacity 120ms ease;
 }
 
 .sileo-content[data-visible="true"] {
+    max-height: max(40px, var(--sileo-content-height, 220px));
+    pointer-events: auto;
     opacity: 1;
     transition-delay: 120ms;
 }
 
 .sileo-toast[data-expanded="true"] .sileo-description {
+    margin-top: 8px;
     max-height: 160px;
     opacity: 1;
     transform: translateY(0);
@@ -160,7 +169,7 @@
 }
 
 .sileo-action {
-    margin-top: 10px;
+    margin-top: 0;
     height: 30px;
     padding: 0 12px;
     border-radius: 999px;
@@ -275,6 +284,7 @@
         animation: none;
     }
 
+    .sileo-content,
     .sileo-description {
         transition: none;
     }
@@ -308,4 +318,8 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+.sileo-content[data-visible="true"] .sileo-action {
+    margin-top: 10px;
 }

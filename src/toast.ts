@@ -19,6 +19,7 @@ import {
     GROUP_THRESHOLD,
 } from "./constants";
 import type {
+    SileoLifecycleContext,
     SileoOffsetConfig,
     SileoOffsetValue,
     SileoOptions,
@@ -83,6 +84,7 @@ const dismissByInstance = (instanceId: string) => {
     if (!target) return;
 
     clearTimer(instanceId);
+    target.hooks?.onDismiss?.(toLifecycleContext(target));
     store.update((prev) =>
         prev.map((item) =>
             item.instanceId === instanceId ? { ...item, exiting: true } : item,
@@ -126,8 +128,10 @@ const buildItem = (options: SileoOptions, state: SileoState): SileoItem => ({
     fill: options.fill,
     roundness: options.roundness,
     autopilot: options.autopilot,
+    swipeToDismiss: options.swipeToDismiss,
     button: options.button,
     groupKey: options.groupKey,
+    hooks: options.hooks,
     createdAt: Date.now(),
 });
 
@@ -150,6 +154,7 @@ const createToast = (raw: SileoOptions, forcedState?: SileoState) => {
             );
             clearTimer(existing.instanceId);
             scheduleDismiss(replacement);
+            replacement.hooks?.onShow?.(toLifecycleContext(replacement));
             return existing.id;
         }
     }
@@ -157,6 +162,7 @@ const createToast = (raw: SileoOptions, forcedState?: SileoState) => {
     const item = buildItem(merged, state);
     store.update((prev) => [...prev, item]);
     scheduleDismiss(item);
+    item.hooks?.onShow?.(toLifecycleContext(item));
     return item.id;
 };
 
@@ -185,6 +191,12 @@ const clearToasts = (position?: SileoPosition) => {
         position ? prev.filter((item) => item.position !== position) : [],
     );
 };
+
+const toLifecycleContext = (item: SileoItem): SileoLifecycleContext => ({
+    id: item.id,
+    instanceId: item.instanceId,
+    state: item.state,
+});
 
 const resolveTheme = (theme: "light" | "dark" | "system" | undefined) => {
     if (theme === "light" || theme === "dark") return theme;
@@ -362,6 +374,7 @@ export interface SileoToasterProps {
     container?: string | HTMLElement;
     grouping?: boolean;
     groupThreshold?: number;
+    ariaLive?: "off" | "polite" | "assertive";
 }
 
 export const sileo = {
@@ -428,6 +441,10 @@ export const Toaster = defineComponent({
         container: [String, Object] as PropType<string | HTMLElement>,
         grouping: { type: Boolean, default: false },
         groupThreshold: { type: Number, default: GROUP_THRESHOLD },
+        ariaLive: {
+            type: String as PropType<"off" | "polite" | "assertive">,
+            default: "polite",
+        },
     },
     setup(props, { slots }) {
         const toasts = ref<SileoItem[]>(store.toasts);
@@ -435,9 +452,66 @@ export const Toaster = defineComponent({
         const expandedToasts = ref<Record<string, boolean>>({});
         const autopilotTimers = new Map<string, ReturnType<typeof setTimeout>[]>();
         const activeToastInstanceId = ref<string | undefined>(undefined);
+        const contentHeights = ref<Record<string, number>>({});
+        const contentRefs = new Map<string, HTMLElement>();
+        const contentObservers = new Map<string, ResizeObserver>();
+
+        const measureContentHeight = (instanceId: string) => {
+            const el = contentRefs.get(instanceId);
+            if (!el) return;
+            const measured = Math.max(0, el.scrollHeight);
+            if (contentHeights.value[instanceId] !== measured) {
+                contentHeights.value[instanceId] = measured;
+            }
+        };
+
+        const setContentRef = (instanceId: string, el: HTMLElement | null) => {
+            if (el) {
+                contentRefs.set(instanceId, el);
+                measureContentHeight(instanceId);
+                if (typeof ResizeObserver === "function") {
+                    if (!contentObservers.has(instanceId)) {
+                        const observer = new ResizeObserver(() => {
+                            measureContentHeight(instanceId);
+                        });
+                        contentObservers.set(instanceId, observer);
+                    }
+                    contentObservers.get(instanceId)?.observe(el);
+                }
+                return;
+            }
+
+            const previous = contentRefs.get(instanceId);
+            const observer = contentObservers.get(instanceId);
+            if (previous && observer) observer.unobserve(previous);
+            contentRefs.delete(instanceId);
+        };
+
+        const clearContentObserver = (instanceId: string) => {
+            const observer = contentObservers.get(instanceId);
+            if (observer) {
+                observer.disconnect();
+                contentObservers.delete(instanceId);
+            }
+            contentRefs.delete(instanceId);
+            delete contentHeights.value[instanceId];
+        };
 
         const setExpanded = (instanceId: string, expanded: boolean) => {
+            const previous = expandedToasts.value[instanceId];
+            if (previous === expanded) return;
+
             expandedToasts.value[instanceId] = expanded;
+            if (previous === undefined) return;
+
+            const item = toasts.value.find((toast) => toast.instanceId === instanceId);
+            if (!item) return;
+
+            if (expanded) {
+                item.hooks?.onExpand?.(toLifecycleContext(item));
+            } else {
+                item.hooks?.onCollapse?.(toLifecycleContext(item));
+            }
         };
 
         const clearAutopilotTimers = (instanceId: string) => {
@@ -518,6 +592,9 @@ export const Toaster = defineComponent({
             for (const instanceId of autopilotTimers.keys()) {
                 clearAutopilotTimers(instanceId);
             }
+            for (const instanceId of contentObservers.keys()) {
+                clearContentObserver(instanceId);
+            }
         });
 
         watch(
@@ -556,14 +633,11 @@ export const Toaster = defineComponent({
                     }
                 }
 
-                for (const item of items) {
-                    scheduleAutopilot(item);
-                }
-
                 for (const instanceId of Object.keys(expandedToasts.value)) {
                     if (!active.has(instanceId)) {
                         clearAutopilotTimers(instanceId);
                         delete expandedToasts.value[instanceId];
+                        clearContentObserver(instanceId);
                     }
                 }
             },
@@ -575,6 +649,7 @@ export const Toaster = defineComponent({
             (activeInstanceId) => {
                 for (const instanceId of Object.keys(expandedToasts.value)) {
                     if (instanceId !== activeInstanceId) {
+                        clearAutopilotTimers(instanceId);
                         setExpanded(instanceId, false);
                     }
                 }
@@ -605,6 +680,20 @@ export const Toaster = defineComponent({
             const roundness = `${Math.max(0, item.roundness ?? DEFAULT_ROUNDNESS)}px`;
             const isExpanded = Boolean(expandedToasts.value[item.instanceId]);
             const contentVisible = isExpanded && item.state !== "loading";
+            const swipeEnabled = item.swipeToDismiss ?? true;
+
+            const swipeState = {
+                startY: 0,
+                pointerId: -1,
+                dragging: false,
+            };
+
+            const resetSwipe = (el: HTMLElement) => {
+                el.style.transform = "";
+                el.style.opacity = "";
+                el.style.transition = "";
+            };
+
             return h(
                 "article",
                 {
@@ -617,6 +706,7 @@ export const Toaster = defineComponent({
                     style: {
                         "--sileo-fill": item.fill,
                         "--sileo-roundness": roundness,
+                        "--sileo-content-height": `${contentHeights.value[item.instanceId] ?? 0}px`,
                     } as CSSProperties,
                     onMouseenter: () => {
                         activeToastInstanceId.value = item.instanceId;
@@ -629,6 +719,55 @@ export const Toaster = defineComponent({
                             .sort((a, b) => b.createdAt - a.createdAt)[0];
                         activeToastInstanceId.value = latest?.instanceId;
                         if (autopilot !== null) setExpanded(item.instanceId, false);
+                    },
+                    onPointerdown: (e: PointerEvent) => {
+                        if (!swipeEnabled || item.state === "loading") return;
+                        const target = e.target as HTMLElement;
+                        if (target.closest("[data-sileo-button='true'], .sileo-dismiss")) {
+                            return;
+                        }
+                        const el = e.currentTarget as HTMLElement;
+                        swipeState.startY = e.clientY;
+                        swipeState.pointerId = e.pointerId;
+                        swipeState.dragging = true;
+                        el.setPointerCapture(e.pointerId);
+                    },
+                    onPointermove: (e: PointerEvent) => {
+                        if (!swipeEnabled || !swipeState.dragging) return;
+                        if (e.pointerId !== swipeState.pointerId) return;
+                        const el = e.currentTarget as HTMLElement;
+                        const deltaY = e.clientY - swipeState.startY;
+                        const clamped = Math.max(-22, Math.min(22, deltaY));
+                        el.style.transform = `translateY(${clamped}px)`;
+                        const alpha = 1 - Math.min(0.35, Math.abs(clamped) / 60);
+                        el.style.opacity = String(alpha);
+                    },
+                    onPointerup: (e: PointerEvent) => {
+                        if (!swipeEnabled || !swipeState.dragging) return;
+                        if (e.pointerId !== swipeState.pointerId) return;
+                        const el = e.currentTarget as HTMLElement;
+                        swipeState.dragging = false;
+                        const deltaY = e.clientY - swipeState.startY;
+                        if (el.hasPointerCapture(e.pointerId)) {
+                            el.releasePointerCapture(e.pointerId);
+                        }
+                        if (Math.abs(deltaY) > 34) {
+                            dismissByInstance(item.instanceId);
+                            return;
+                        }
+                        el.style.transition = "transform 150ms ease, opacity 150ms ease";
+                        resetSwipe(el);
+                    },
+                    onPointercancel: (e: PointerEvent) => {
+                        if (!swipeEnabled || !swipeState.dragging) return;
+                        if (e.pointerId !== swipeState.pointerId) return;
+                        const el = e.currentTarget as HTMLElement;
+                        swipeState.dragging = false;
+                        if (el.hasPointerCapture(e.pointerId)) {
+                            el.releasePointerCapture(e.pointerId);
+                        }
+                        el.style.transition = "transform 150ms ease, opacity 150ms ease";
+                        resetSwipe(el);
                     },
                 },
                 [
@@ -667,6 +806,9 @@ export const Toaster = defineComponent({
                                 class: "sileo-content",
                                 "data-sileo-content": "true",
                                 "data-visible": contentVisible ? "true" : "false",
+                                ref: (el: Element | null) => {
+                                    setContentRef(item.instanceId, el as HTMLElement | null);
+                                },
                             },
                             [
                                 item.description
@@ -761,6 +903,9 @@ export const Toaster = defineComponent({
                     "data-sileo-viewport": "true",
                     "data-position": position,
                     "data-theme": resolveTheme(props.theme),
+                    "aria-live": props.ariaLive,
+                    "aria-atomic": "true",
+                    role: "status",
                     style: getOffsetStyle(position, props.offset),
                 },
                 children,

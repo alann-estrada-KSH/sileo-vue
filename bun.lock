@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "sileo",
+      "name": "@alann-estrada-ksh/sileo-vue",
       "devDependencies": {
         "@vue/test-utils": "^2.4.6",
         "bunchee": "^6.9.4",

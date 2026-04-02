@@ -26,6 +26,19 @@ export interface SileoAutopilot {
 	collapse?: number;
 }
 
+export interface SileoLifecycleContext {
+	id: string;
+	instanceId: string;
+	state: SileoState;
+}
+
+export interface SileoLifecycleHooks {
+	onShow?: (ctx: SileoLifecycleContext) => void;
+	onExpand?: (ctx: SileoLifecycleContext) => void;
+	onCollapse?: (ctx: SileoLifecycleContext) => void;
+	onDismiss?: (ctx: SileoLifecycleContext) => void;
+}
+
 export const SILEO_POSITIONS = [
 	"top-left",
 	"top-center",
@@ -49,8 +62,10 @@ export interface SileoOptions {
 	fill?: string;
 	roundness?: number;
 	autopilot?: boolean | SileoAutopilot;
+	swipeToDismiss?: boolean;
 	button?: SileoButton;
 	groupKey?: string;
+	hooks?: SileoLifecycleHooks;
 }
 
 export type SileoOffsetValue = number | string;

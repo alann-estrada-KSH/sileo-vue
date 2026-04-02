@@ -207,6 +207,39 @@ describe("sileo", () => {
         expect(toast?.getAttribute("data-expanded")).toBe("false");
     });
 
+    it("does not re-expand older toast when a newer one is active", async () => {
+        vi.useFakeTimers();
+        mountToaster();
+
+        sileo.info({
+            title: "First",
+            description: "First description",
+            duration: 5000,
+            autopilot: { expand: 50, collapse: 300 },
+        });
+        await flush();
+
+        vi.advanceTimersByTime(70);
+        await flush();
+
+        sileo.info({
+            title: "Second",
+            description: "Second description",
+            duration: 5000,
+            autopilot: { expand: 50, collapse: 300 },
+        });
+        await flush();
+
+        const firstTitle = Array.from(document.querySelectorAll(".sileo-title")).find(
+            (el) => el.textContent === "First",
+        );
+        const firstToast = firstTitle?.closest("[data-sileo-toast='true']") as HTMLElement | null;
+
+        vi.advanceTimersByTime(1000);
+        await flush();
+        expect(firstToast?.getAttribute("data-expanded")).toBe("false");
+    });
+
     it("supports promise success lifecycle", async () => {
         mountToaster();
 
@@ -221,5 +254,49 @@ describe("sileo", () => {
             (el) => el.textContent,
         );
         expect(titles).toContain("Success ok");
+    });
+
+    it("fires lifecycle hooks through show, expand, collapse and dismiss", async () => {
+        vi.useFakeTimers();
+        mountToaster();
+
+        const onShow = vi.fn();
+        const onExpand = vi.fn();
+        const onCollapse = vi.fn();
+        const onDismiss = vi.fn();
+
+        const id = sileo.info({
+            title: "Hooks",
+            description: "Lifecycle",
+            duration: 5000,
+            autopilot: { expand: 50, collapse: 180 },
+            hooks: { onShow, onExpand, onCollapse, onDismiss },
+        });
+
+        expect(typeof id).toBe("string");
+        expect(onShow).toHaveBeenCalledTimes(1);
+
+        await flush();
+        vi.advanceTimersByTime(60);
+        await flush();
+        expect(onExpand).toHaveBeenCalledTimes(1);
+
+        vi.advanceTimersByTime(200);
+        await flush();
+        expect(onCollapse).toHaveBeenCalledTimes(1);
+
+        sileo.dismiss(id);
+        await flush();
+        expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it("applies aria-live prop to viewport", async () => {
+        mountToaster({ ariaLive: "assertive" });
+        sileo.info({ title: "A11y", duration: null });
+        await flush();
+
+        const viewport = document.querySelector("[data-sileo-viewport='true']");
+        expect(viewport?.getAttribute("aria-live")).toBe("assertive");
+        expect(viewport?.getAttribute("aria-atomic")).toBe("true");
     });
 });

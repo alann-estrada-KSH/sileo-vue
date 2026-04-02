@@ -29,7 +29,10 @@
 	"scripts": {
 		"build": "bunchee && node ./scripts/copy-css.mjs",
 		"dev": "bunchee --watch",
-		"test": "vitest run"
+		"test": "vitest run",
+		"example:install": "npm --prefix example install",
+		"example:dev": "npm --prefix example run dev",
+		"example:build": "npm --prefix example run build"
 	},
 	"peerDependencies": {
 		"vue": ">=3"
