@@ -7,16 +7,22 @@ import {
     onMounted,
     ref,
     watch,
+    type ComponentPublicInstance,
     type CSSProperties,
     type PropType,
 } from "vue";
 import {
     AUTOPILOT_COLLAPSE_DELAY,
     AUTOPILOT_EXPAND_DELAY,
+    BLUR_RATIO,
     DEFAULT_ROUNDNESS,
     DEFAULT_TOAST_DURATION,
     EXIT_DURATION,
     GROUP_THRESHOLD,
+    MIN_EXPAND_RATIO,
+    PILL_PADDING,
+    TOAST_HEIGHT,
+    TOAST_WIDTH,
 } from "./constants";
 import type {
     SileoLifecycleContext,
@@ -456,6 +462,12 @@ export const Toaster = defineComponent({
         const contentRefs = new Map<string, HTMLElement>();
         const contentObservers = new Map<string, ResizeObserver>();
 
+        // Pill inner measurement (drives SVG pill width)
+        const readyToasts = ref<Record<string, boolean>>({});
+        const pillWidths = ref<Record<string, number>>({});
+        const pillInnerRefs = new Map<string, HTMLElement>();
+        const pillInnerObservers = new Map<string, ResizeObserver>();
+
         const measureContentHeight = (instanceId: string) => {
             const el = contentRefs.get(instanceId);
             if (!el) return;
@@ -495,6 +507,51 @@ export const Toaster = defineComponent({
             }
             contentRefs.delete(instanceId);
             delete contentHeights.value[instanceId];
+        };
+
+        const measurePillInner = (instanceId: string) => {
+            const el = pillInnerRefs.get(instanceId);
+            if (!el) return;
+            const header = el.closest('[data-sileo-header]') as HTMLElement | null;
+            const hPad = header
+                ? parseFloat(getComputedStyle(header).paddingLeft) + parseFloat(getComputedStyle(header).paddingRight)
+                : 16;
+            const w = el.scrollWidth + hPad;
+            if (pillWidths.value[instanceId] !== w) {
+                pillWidths.value[instanceId] = w;
+            }
+        };
+
+        const setPillInnerRef = (instanceId: string, el: HTMLElement | null) => {
+            if (el) {
+                pillInnerRefs.set(instanceId, el);
+                measurePillInner(instanceId);
+                if (typeof ResizeObserver === 'function' && !pillInnerObservers.has(instanceId)) {
+                    const observer = new ResizeObserver(() => measurePillInner(instanceId));
+                    pillInnerObservers.set(instanceId, observer);
+                    observer.observe(el);
+                }
+                return;
+            }
+            const prev = pillInnerRefs.get(instanceId);
+            const obs = pillInnerObservers.get(instanceId);
+            if (prev && obs) obs.unobserve(prev);
+            pillInnerRefs.delete(instanceId);
+        };
+
+        const clearPillInnerObserver = (instanceId: string) => {
+            const obs = pillInnerObservers.get(instanceId);
+            if (obs) { obs.disconnect(); pillInnerObservers.delete(instanceId); }
+            pillInnerRefs.delete(instanceId);
+            delete pillWidths.value[instanceId];
+        };
+
+        const scheduleReady = (instanceId: string) => {
+            globalThis.requestAnimationFrame(() => {
+                if (pillInnerRefs.has(instanceId) && toasts.value.some(t => t.instanceId === instanceId)) {
+                    readyToasts.value[instanceId] = true;
+                }
+            });
         };
 
         const setExpanded = (instanceId: string, expanded: boolean) => {
@@ -595,6 +652,9 @@ export const Toaster = defineComponent({
             for (const instanceId of contentObservers.keys()) {
                 clearContentObserver(instanceId);
             }
+            for (const instanceId of pillInnerObservers.keys()) {
+                clearPillInnerObserver(instanceId);
+            }
         });
 
         watch(
@@ -638,6 +698,8 @@ export const Toaster = defineComponent({
                         clearAutopilotTimers(instanceId);
                         delete expandedToasts.value[instanceId];
                         clearContentObserver(instanceId);
+                        clearPillInnerObserver(instanceId);
+                        delete readyToasts.value[instanceId];
                     }
                 }
             },
@@ -677,10 +739,47 @@ export const Toaster = defineComponent({
         });
 
         const renderToast = (item: SileoItem) => {
-            const roundness = `${Math.max(0, item.roundness ?? DEFAULT_ROUNDNESS)}px`;
+            const r = Math.max(0, item.roundness ?? DEFAULT_ROUNDNESS);
             const isExpanded = Boolean(expandedToasts.value[item.instanceId]);
-            const contentVisible = isExpanded && item.state !== "loading";
+            const isReady = Boolean(readyToasts.value[item.instanceId]);
             const swipeEnabled = item.swipeToDismiss ?? true;
+            const pos = item.position ?? store.position;
+            const align: 'left' | 'center' | 'right' =
+                pos.endsWith('left') ? 'left'
+                : pos.endsWith('right') ? 'right'
+                : 'center';
+            const expandDir: 'top' | 'bottom' = pos.startsWith('top') ? 'bottom' : 'top';
+
+            const hasDesc = Boolean(item.description || item.button);
+            const isLoading = item.state === 'loading';
+            const isOpen = hasDesc && isExpanded && !isLoading;
+
+            const blur = r * BLUR_RATIO;
+            const rawPillW = pillWidths.value[item.instanceId] ?? 0;
+            const resolvedPillWidth = Math.max(rawPillW + PILL_PADDING, TOAST_HEIGHT);
+            const pillH = TOAST_HEIGHT + blur * 3;
+
+            const pillX = align === 'right' ? TOAST_WIDTH - resolvedPillWidth
+                       : align === 'center' ? (TOAST_WIDTH - resolvedPillWidth) / 2
+                       : 0;
+
+            const contentH = contentHeights.value[item.instanceId] ?? 0;
+            const minExpanded = TOAST_HEIGHT * MIN_EXPAND_RATIO;
+            const expanded = hasDesc ? Math.max(minExpanded, TOAST_HEIGHT + contentH) : minExpanded;
+            const expandedContent = Math.max(0, expanded - TOAST_HEIGHT);
+            const svgH = Math.max(expanded, TOAST_HEIGHT);
+
+            const resolvedTheme = resolveTheme(props.theme);
+            const fillColor = item.fill ?? (resolvedTheme === 'dark' ? '#f2f2f2' : '#1a1a1a');
+            const filterId = `sileo-gooey-${item.instanceId.replace(/[^a-z0-9]/gi, '-')}`;
+
+            const rootStyle: CSSProperties & Record<string, string> = {
+                '--_h': `${isOpen ? expanded : TOAST_HEIGHT}px`,
+                '--_pw': `${resolvedPillWidth}px`,
+                '--_px': `${pillX}px`,
+                '--_ht': `translateY(${isOpen ? (expandDir === 'bottom' ? 3 : -3) : 0}px) scale(${isOpen ? 0.9 : 1})`,
+                '--_co': isOpen ? '1' : '0',
+            };
 
             const swipeState = {
                 startY: 0,
@@ -695,19 +794,17 @@ export const Toaster = defineComponent({
             };
 
             return h(
-                "article",
+                "button",
                 {
                     key: item.instanceId,
+                    type: "button",
                     "data-sileo-toast": "true",
                     "data-state": item.state,
                     "data-exiting": item.exiting ? "true" : "false",
                     "data-expanded": isExpanded ? "true" : "false",
-                    class: ["sileo-toast", item.styles?.toast],
-                    style: {
-                        "--sileo-fill": item.fill,
-                        "--sileo-roundness": roundness,
-                        "--sileo-content-height": `${contentHeights.value[item.instanceId] ?? 0}px`,
-                    } as CSSProperties,
+                    "data-ready": isReady ? "true" : "false",
+                    class: item.styles?.toast,
+                    style: rootStyle,
                     onMouseenter: () => {
                         activeToastInstanceId.value = item.instanceId;
                         setExpanded(item.instanceId, true);
@@ -771,74 +868,142 @@ export const Toaster = defineComponent({
                     },
                 },
                 [
-                    h("div", { class: "sileo-head" }, [
-                        h(
-                            "span",
-                            {
-                                class: ["sileo-badge", item.styles?.badge],
-                                "data-sileo-badge": "true",
-                            },
-                            item.icon ?? renderStateIcon(item.state),
-                        ),
-                        h(
-                            "p",
-                            {
-                                class: ["sileo-title", item.styles?.title],
-                                "data-sileo-title": "true",
-                            },
-                            item.title,
-                        ),
-                        h(
-                            "button",
-                            {
-                                type: "button",
-                                class: "sileo-dismiss",
-                                onClick: () => dismissByInstance(item.instanceId),
-                                "aria-label": "Dismiss toast",
-                            },
-                            "x",
-                        ),
+                    // SVG gooey canvas
+                    h("div", {
+                        "data-sileo-canvas": "true",
+                        "data-edge": expandDir,
+                        style: { filter: `url(#${filterId})` } as CSSProperties,
+                    }, [
+                        h("svg", {
+                            "data-sileo-svg": "true",
+                            width: String(TOAST_WIDTH),
+                            height: String(svgH),
+                            viewBox: `0 0 ${TOAST_WIDTH} ${svgH}`,
+                            xmlns: "http://www.w3.org/2000/svg",
+                            "aria-hidden": "true",
+                            focusable: "false",
+                        }, [
+                            h("defs", {}, [
+                                h("filter", {
+                                    id: filterId,
+                                    x: "-20%",
+                                    y: "-20%",
+                                    width: "140%",
+                                    height: "140%",
+                                    "color-interpolation-filters": "sRGB",
+                                }, [
+                                    h("feGaussianBlur", {
+                                        in: "SourceGraphic",
+                                        stdDeviation: String(blur),
+                                        result: "blur",
+                                    }),
+                                    h("feColorMatrix", {
+                                        in: "blur",
+                                        mode: "matrix",
+                                        values: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10",
+                                        result: "goo",
+                                    }),
+                                    h("feComposite", {
+                                        in: "SourceGraphic",
+                                        in2: "goo",
+                                        operator: "atop",
+                                    }),
+                                ]),
+                            ]),
+                            h("rect", {
+                                "data-sileo-pill": "true",
+                                rx: String(r),
+                                ry: String(r),
+                                fill: fillColor,
+                                style: {
+                                    x: `${pillX}px`,
+                                    width: `${resolvedPillWidth}px`,
+                                    height: `${isOpen ? pillH : TOAST_HEIGHT}px`,
+                                } as CSSProperties,
+                            }),
+                            h("rect", {
+                                "data-sileo-body": "true",
+                                width: String(TOAST_WIDTH),
+                                rx: String(r),
+                                ry: String(r),
+                                fill: fillColor,
+                                style: {
+                                    y: `${TOAST_HEIGHT}px`,
+                                    height: `${isOpen ? expandedContent : 0}px`,
+                                    opacity: isOpen ? "1" : "0",
+                                } as CSSProperties,
+                            }),
+                        ]),
                     ]),
-                    item.description || item.button
-                        ? h(
-                            "div",
-                            {
-                                class: "sileo-content",
-                                "data-sileo-content": "true",
-                                "data-visible": contentVisible ? "true" : "false",
-                                ref: (el: Element | null) => {
+
+                    // Header
+                    h("div", {
+                        "data-sileo-header": "true",
+                        "data-edge": expandDir,
+                    }, [
+                        h("div", { "data-sileo-header-stack": "true" }, [
+                            h("div", {
+                                "data-sileo-header-inner": "true",
+                                ref: (el: Element | ComponentPublicInstance | null) => {
+                                    setPillInnerRef(item.instanceId, el as HTMLElement | null);
+                                    if (el) scheduleReady(item.instanceId);
+                                },
+                            }, [
+                                h("div", {
+                                    "data-sileo-badge": "true",
+                                    "data-state": item.state,
+                                    class: item.styles?.badge,
+                                }, item.icon ?? renderStateIcon(item.state)),
+                                h("span", {
+                                    "data-sileo-title": "true",
+                                    "data-state": item.state,
+                                    class: item.styles?.title,
+                                }, item.title),
+                                h("button", {
+                                    type: "button",
+                                    class: "sileo-dismiss",
+                                    onClick: (e: MouseEvent) => {
+                                        e.stopPropagation();
+                                        dismissByInstance(item.instanceId);
+                                    },
+                                    "aria-label": "Dismiss toast",
+                                }, "×"),
+                            ]),
+                        ]),
+                    ]),
+
+                    // Content
+                    hasDesc
+                        ? h("div", {
+                            "data-sileo-content": "true",
+                            "data-edge": expandDir,
+                            "data-visible": isOpen ? "true" : "false",
+                        }, [
+                            h("div", {
+                                "data-sileo-description": "true",
+                                class: item.styles?.description,
+                                ref: (el: Element | ComponentPublicInstance | null) => {
                                     setContentRef(item.instanceId, el as HTMLElement | null);
                                 },
-                            },
-                            [
+                            }, [
                                 item.description
-                                    ? h(
-                                        "div",
-                                        {
-                                            class: ["sileo-description", item.styles?.description],
-                                            "data-sileo-description": "true",
-                                        },
-                                        [item.description],
-                                    )
+                                    ? h("span", {}, item.description)
                                     : null,
                                 item.button
-                                    ? h(
-                                        "button",
-                                        {
-                                            type: "button",
-                                            class: ["sileo-action", item.styles?.button],
-                                            "data-sileo-button": "true",
-                                            onClick: (e: MouseEvent) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                item.button?.onClick?.();
-                                            },
+                                    ? h("button", {
+                                        type: "button",
+                                        "data-sileo-button": "true",
+                                        "data-state": item.state,
+                                        class: item.styles?.button,
+                                        onClick: (e: MouseEvent) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            item.button?.onClick?.();
                                         },
-                                        item.button.title,
-                                    )
+                                    }, item.button.title)
                                     : null,
-                            ],
-                        )
+                            ]),
+                        ])
                         : null,
                 ],
             );

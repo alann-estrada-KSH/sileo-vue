@@ -4,3 +4,9 @@ export const DEFAULT_ROUNDNESS = 16;
 export const GROUP_THRESHOLD = 4;
 export const AUTOPILOT_EXPAND_DELAY = DEFAULT_TOAST_DURATION * 0.025;
 export const AUTOPILOT_COLLAPSE_DELAY = DEFAULT_TOAST_DURATION - 2000;
+
+export const TOAST_HEIGHT = 40;
+export const TOAST_WIDTH = 350;
+export const BLUR_RATIO = 0.5;
+export const PILL_PADDING = 10;
+export const MIN_EXPAND_RATIO = 2.25;
