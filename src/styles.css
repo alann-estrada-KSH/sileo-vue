@@ -376,28 +376,36 @@
 
 /* ── Themes ──────────────────────────────────────────────────────────── */
 
+[data-sileo-viewport][data-theme="dark"] [data-sileo-toast] {
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
+}
+
+[data-sileo-viewport][data-theme="light"] [data-sileo-toast] {
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.15));
+}
+
 [data-sileo-viewport][data-theme="dark"] [data-sileo-header] {
-    color: #1a1a1a;
-}
-
-[data-sileo-viewport][data-theme="dark"] .sileo-dismiss {
-    background: rgba(0, 0, 0, 0.12);
-}
-
-[data-sileo-viewport][data-theme="light"] [data-sileo-header] {
     color: #f2f2f2;
 }
 
-[data-sileo-viewport][data-theme="light"] .sileo-dismiss {
+[data-sileo-viewport][data-theme="dark"] .sileo-dismiss {
     background: rgba(255, 255, 255, 0.12);
 }
 
+[data-sileo-viewport][data-theme="light"] [data-sileo-header] {
+    color: #1a1a1a;
+}
+
+[data-sileo-viewport][data-theme="light"] .sileo-dismiss {
+    background: rgba(0, 0, 0, 0.12);
+}
+
 [data-sileo-viewport][data-theme="dark"] [data-sileo-description] {
-    color: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 [data-sileo-viewport][data-theme="light"] [data-sileo-description] {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(0, 0, 0, 0.5);
 }
 
 /* ── Group pill ──────────────────────────────────────────────────────── */
@@ -415,13 +423,13 @@
     cursor: pointer;
     pointer-events: auto;
     width: var(--sileo-width);
-    background: #f2f2f2;
-    color: #1a1a1a;
+    background: #1a1a1a;
+    color: #f2f2f2;
 }
 
 [data-sileo-viewport][data-theme="light"] .sileo-group {
-    background: #1a1a1a;
-    color: #f2f2f2;
+    background: #f2f2f2;
+    color: #1a1a1a;
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────── */

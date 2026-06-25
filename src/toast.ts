@@ -770,7 +770,7 @@ export const Toaster = defineComponent({
             const svgH = Math.max(expanded, TOAST_HEIGHT);
 
             const resolvedTheme = resolveTheme(props.theme);
-            const fillColor = item.fill ?? (resolvedTheme === 'dark' ? '#f2f2f2' : '#1a1a1a');
+            const fillColor = item.fill ?? (resolvedTheme === 'dark' ? '#1a1a1a' : '#f2f2f2');
             const filterId = `sileo-gooey-${item.instanceId.replace(/[^a-z0-9]/gi, '-')}`;
 
             const rootStyle: CSSProperties & Record<string, string> = {

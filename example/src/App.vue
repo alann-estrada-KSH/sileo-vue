@@ -150,6 +150,11 @@ const fireGrouped = () => {
     place-items: center;
     padding: 2rem;
     transition: background 300ms ease;
+    background: radial-gradient(circle at 20% 20%, #1f2940 0%, #0f1421 45%, #090d16 100%);
+}
+
+.demo[data-theme="light"] {
+    background: radial-gradient(circle at 20% 20%, #e8edf5 0%, #d6dde9 45%, #c8d1e0 100%);
 }
 
 .panel {
