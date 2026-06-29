@@ -629,7 +629,7 @@ export const Toaster = defineComponent({
         };
 
         const listener: Listener = (next) => {
-            toasts.value = next;
+            toasts.value = [...next];
         };
 
         onMounted(() => {
@@ -1061,6 +1061,11 @@ export const Toaster = defineComponent({
                 }
             }
 
+            const liveItemsForPosition = () =>
+                toasts.value.filter(
+                    (item) => (item.position ?? store.position) === position && !item.exiting,
+                );
+
             return h(
                 "section",
                 {
@@ -1072,6 +1077,16 @@ export const Toaster = defineComponent({
                     "aria-atomic": "true",
                     role: "status",
                     style: getOffsetStyle(position, props.offset),
+                    onMouseenter: () => {
+                        for (const item of liveItemsForPosition()) {
+                            clearTimer(item.instanceId);
+                        }
+                    },
+                    onMouseleave: () => {
+                        for (const item of liveItemsForPosition()) {
+                            scheduleDismiss(item);
+                        }
+                    },
                 },
                 children,
             );
