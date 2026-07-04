@@ -1,6 +1,6 @@
-# Sileo Documentation
+# sileo-vue Documentation
 
-Sileo is a Vue toast library built for expressive notifications, grouped stacks, async flows, and touch-friendly interactions.
+sileo-vue is a Vue toast library built for expressive notifications, grouped stacks, async flows, and touch-friendly interactions.
 
 ## Start Here
 
@@ -10,7 +10,7 @@ Sileo is a Vue toast library built for expressive notifications, grouped stacks,
 - [Styling and Theming](styling.md)
 - [Advanced Features](advanced-features.md)
 
-## What Sileo Is Good At
+## What sileo-vue Is Good At
 
 - Fast imperative notifications from anywhere in your app.
 - Async `promise` flows with loading/success/error/action states.
@@ -21,8 +21,8 @@ Sileo is a Vue toast library built for expressive notifications, grouped stacks,
 
 ## Package Entry Points
 
-- `import { sileo, Toaster } from "@alann-estrada-KSH/sileo-vue";`
-- `import "sileo/styles.css"`
+- `import { sileo, Toaster } from "@alann-estrada-ksh/sileo-vue";`
+- `import "@alann-estrada-ksh/sileo-vue/styles.css"`
 
 ## Recommended Flow
 

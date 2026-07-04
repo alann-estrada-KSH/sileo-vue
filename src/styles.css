@@ -19,6 +19,7 @@
 
 [data-sileo-toast] {
     position: relative;
+    z-index: 1;
     cursor: pointer;
     pointer-events: auto;
     touch-action: none;
@@ -26,12 +27,22 @@
     background: transparent;
     padding: 0;
     width: var(--sileo-width);
-    height: var(--_h, var(--sileo-height));
+    height: var(--sileo-height);
     opacity: 0;
     transform: translateZ(0) scale(0.95);
     transform-origin: center;
     contain: layout style;
     overflow: visible;
+}
+
+/*
+ * Expanded content overlays on top of the fixed-height flex item instead of
+ * growing it — growing it reflows sibling toasts mid-hover, which shifts them
+ * out from under the pointer and causes an enter/leave thrash once more than
+ * a couple toasts are stacked.
+ */
+[data-sileo-toast][data-expanded="true"] {
+    z-index: 30;
 }
 
 [data-sileo-toast][data-state="loading"] {
@@ -228,7 +239,7 @@
     height: 18px;
     border-radius: 9999px;
     border: 0;
-    background: rgba(128, 128, 128, 0.25);
+    background: var(--sileo-dismiss-bg, rgba(128, 128, 128, 0.25));
     color: currentColor;
     font-size: 10px;
     cursor: pointer;
@@ -239,7 +250,7 @@
 
 .sileo-dismiss:hover {
     opacity: 1;
-    background: rgba(128, 128, 128, 0.4);
+    background: var(--sileo-dismiss-bg-hover, rgba(128, 128, 128, 0.4));
 }
 
 /* ── Content ─────────────────────────────────────────────────────────── */
@@ -376,36 +387,61 @@
 
 /* ── Themes ──────────────────────────────────────────────────────────── */
 
+[data-sileo-header] {
+    color: var(--sileo-fg-color, inherit);
+}
+
+[data-sileo-description] {
+    color: var(--sileo-desc-color, inherit);
+}
+
+[data-sileo-viewport][data-theme="dark"] {
+    --sileo-fg-color: #f2f2f2;
+    --sileo-desc-color: rgba(255, 255, 255, 0.5);
+    --sileo-dismiss-bg: rgba(255, 255, 255, 0.12);
+    --sileo-dismiss-bg-hover: rgba(255, 255, 255, 0.2);
+}
+
+[data-sileo-viewport][data-theme="light"],
+[data-sileo-viewport][data-theme="custom"] {
+    --sileo-fg-color: #1a1a1a;
+    --sileo-desc-color: rgba(0, 0, 0, 0.5);
+    --sileo-dismiss-bg: rgba(0, 0, 0, 0.12);
+    --sileo-dismiss-bg-hover: rgba(0, 0, 0, 0.2);
+}
+
+[data-sileo-viewport][data-theme="colored"] {
+    --sileo-fg-color: #ffffff;
+    --sileo-desc-color: rgba(255, 255, 255, 0.78);
+    --sileo-dismiss-bg: rgba(255, 255, 255, 0.22);
+    --sileo-dismiss-bg-hover: rgba(255, 255, 255, 0.32);
+}
+
 [data-sileo-viewport][data-theme="dark"] [data-sileo-toast] {
     filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
 }
 
-[data-sileo-viewport][data-theme="light"] [data-sileo-toast] {
+[data-sileo-viewport][data-theme="light"] [data-sileo-toast],
+[data-sileo-viewport][data-theme="custom"] [data-sileo-toast] {
     filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.15));
 }
 
-[data-sileo-viewport][data-theme="dark"] [data-sileo-header] {
-    color: #f2f2f2;
+[data-sileo-viewport][data-theme="colored"] [data-sileo-toast] {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
 }
 
-[data-sileo-viewport][data-theme="dark"] .sileo-dismiss {
-    background: rgba(255, 255, 255, 0.12);
+/* Colored mode uses the state hue as the toast's own fill, so the badge/title/
+   button accents (normally tinted with that same hue) would blend into the
+   background. Force them to the light foreground instead. */
+[data-sileo-viewport][data-theme="colored"] :is([data-sileo-badge], [data-sileo-title])[data-state] {
+    --sileo-tone: var(--sileo-fg-color);
+    --sileo-tone-bg: rgba(255, 255, 255, 0.22);
 }
 
-[data-sileo-viewport][data-theme="light"] [data-sileo-header] {
-    color: #1a1a1a;
-}
-
-[data-sileo-viewport][data-theme="light"] .sileo-dismiss {
-    background: rgba(0, 0, 0, 0.12);
-}
-
-[data-sileo-viewport][data-theme="dark"] [data-sileo-description] {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-[data-sileo-viewport][data-theme="light"] [data-sileo-description] {
-    color: rgba(0, 0, 0, 0.5);
+[data-sileo-viewport][data-theme="colored"] [data-sileo-button][data-state] {
+    --sileo-btn-color: var(--sileo-fg-color);
+    --sileo-btn-bg: rgba(255, 255, 255, 0.18);
+    --sileo-btn-bg-hover: rgba(255, 255, 255, 0.28);
 }
 
 /* ── Group pill ──────────────────────────────────────────────────────── */
@@ -423,13 +459,14 @@
     cursor: pointer;
     pointer-events: auto;
     width: var(--sileo-width);
-    background: #1a1a1a;
-    color: #f2f2f2;
+    background: var(--sileo-bg-color, #1a1a1a);
+    color: var(--sileo-fg-color, #f2f2f2);
 }
 
-[data-sileo-viewport][data-theme="light"] .sileo-group {
-    background: #f2f2f2;
-    color: #1a1a1a;
+[data-sileo-viewport][data-theme="light"] .sileo-group,
+[data-sileo-viewport][data-theme="custom"] .sileo-group {
+    background: var(--sileo-bg-color, #f2f2f2);
+    color: var(--sileo-fg-color, #1a1a1a);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────── */

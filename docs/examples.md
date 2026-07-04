@@ -76,7 +76,7 @@ sileo.info({ title: "File 2 uploaded", groupKey: "uploads" });
 sileo.info({ title: "File 3 uploaded", groupKey: "uploads" });
 ```
 
-When `Toaster grouping` is enabled and the bucket crosses the threshold, Sileo collapses the set into a summary pill.
+When `Toaster grouping` is enabled and the bucket crosses the threshold, sileo-vue collapses the set into a summary pill.
 
 ## 6. Rich description content
 
@@ -120,7 +120,44 @@ sileo.info({
 });
 ```
 
-## 9. Suggested app shell setup
+## 9. Custom branded palette
+
+```vue
+<script setup lang="ts">
+import type { SileoColors } from "@alann-estrada-ksh/sileo-vue";
+
+const brand: SileoColors = {
+  background: "#1b1030",
+  foreground: "#f4e9ff",
+  success: "#7dffb3",
+  error: "#ff6b81",
+};
+</script>
+
+<template>
+  <Toaster theme="custom" :colors="brand" />
+</template>
+```
+
+See [Styling and Theming](styling.md) for the full `SileoColors` field list.
+
+## 10. Toastify-style colored toasts
+
+```vue
+<template>
+  <Toaster theme="colored" />
+</template>
+```
+
+Each toast's background now matches its own state — success is green, error is red, and so on — with title, description, and badge automatically switched to a readable light foreground. Override a single state while keeping the rest:
+
+```vue
+<template>
+  <Toaster theme="colored" :colors="{ success: '#059669' }" />
+</template>
+```
+
+## 11. Suggested app shell setup
 
 ```vue
 <template>

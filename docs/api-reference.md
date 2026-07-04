@@ -82,6 +82,25 @@ interface SileoStyles {
 }
 ```
 
+## `SileoColors`
+
+Passed to `Toaster` via the `colors` prop. Every field is optional.
+
+```ts
+interface SileoColors {
+  background?: string;
+  foreground?: string;
+  description?: string;
+  dismissBackground?: string;
+  success?: string;
+  error?: string;
+  warning?: string;
+  info?: string;
+  action?: string;
+  loading?: string;
+}
+```
+
 ## `SileoLifecycleHooks`
 
 ```ts
@@ -124,7 +143,8 @@ interface SileoPromiseOptions<T = unknown> {
 | `position` | `SileoPosition` | `top-right` | Default position for new toasts |
 | `offset` | `number \| string \| object` | - | Distance from viewport edges |
 | `options` | `Partial<SileoOptions>` | - | Global defaults merged into each toast |
-| `theme` | `light \| dark \| system` | system-resolved | Controls viewport theme tokens |
+| `theme` | `light \| dark \| system \| custom \| colored` | system-resolved | Controls viewport theme tokens. `colored` fills each toast with its state color (see [Styling and Theming](styling.md)) |
+| `colors` | `Partial<SileoColors>` | - | Per-field color overrides, works with any theme (see [Styling and Theming](styling.md)) |
 | `container` | `string \| HTMLElement` | `body` | Teleport target |
 | `grouping` | `boolean` | `false` | Enables toast grouping |
 | `groupThreshold` | `number` | `4` | Toasts needed before grouping kicks in |

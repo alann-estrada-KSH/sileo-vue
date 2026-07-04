@@ -1,10 +1,10 @@
-# Sileo Advanced Features
+# sileo-vue Advanced Features
 
 This document covers the latest runtime enhancements added to the Vue implementation.
 
 ## 1. Dynamic Content Height
 
-`Sileo` now measures the real content height per toast and animates expand/collapse using that value.
+sileo-vue now measures the real content height per toast and animates expand/collapse using that value.
 
 What this fixes:
 - No fixed-height clipping for long descriptions.

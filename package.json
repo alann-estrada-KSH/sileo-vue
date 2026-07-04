@@ -1,6 +1,6 @@
 {
 	"name": "@alann-estrada-ksh/sileo-vue",
-	"version": "0.2.2",
+	"version": "0.3.0",
 	"description": "An opinionated toast notification library for Vue.",
 	"license": "MIT",
 	"repository": {
@@ -32,7 +32,10 @@
 		"test": "vitest run",
 		"example:install": "npm --prefix example install",
 		"example:dev": "npm --prefix example run dev",
-		"example:build": "npm --prefix example run build"
+		"example:build": "npm --prefix example run build",
+		"landing:install": "npm --prefix landing install",
+		"landing:dev": "npm --prefix landing run dev",
+		"landing:build": "npm --prefix landing run build"
 	},
 	"peerDependencies": {
 		"vue": ">=3"

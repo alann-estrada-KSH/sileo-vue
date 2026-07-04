@@ -1,6 +1,6 @@
 # Implementation Notes
 
-This document is for teams integrating Sileo into an existing Vue app or design system.
+This document is for teams integrating sileo-vue into an existing Vue app or design system.
 
 ## Placement
 
@@ -17,7 +17,7 @@ Avoid rendering multiple global toasters unless you intentionally need separate 
 
 ```vue
 <script setup lang="ts">
-import { Toaster } from "@alann-estrada-KSH/sileo-vue";
+import { Toaster } from "@alann-estrada-ksh/sileo-vue";
 </script>
 
 <template>

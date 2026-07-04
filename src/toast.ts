@@ -19,12 +19,14 @@ import {
     DEFAULT_TOAST_DURATION,
     EXIT_DURATION,
     GROUP_THRESHOLD,
+    HOVER_INTENT_WINDOW,
     MIN_EXPAND_RATIO,
     PILL_PADDING,
     TOAST_HEIGHT,
     TOAST_WIDTH,
 } from "./constants";
 import type {
+    SileoColors,
     SileoLifecycleContext,
     SileoOffsetConfig,
     SileoOffsetValue,
@@ -65,6 +67,8 @@ const store = {
 };
 
 const dismissalTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const dismissalDeadlines = new Map<string, number>();
+const dismissalRemaining = new Map<string, number>();
 let sequence = 0;
 
 const nextId = () => `sileo-${++sequence}-${Date.now().toString(36)}`;
@@ -76,6 +80,38 @@ const clearTimer = (instanceId: string) => {
         clearTimeout(timer);
         dismissalTimers.delete(instanceId);
     }
+    dismissalDeadlines.delete(instanceId);
+    dismissalRemaining.delete(instanceId);
+};
+
+// Pausing must preserve the remaining time, not just stop and later restart a
+// fresh full-duration timer — otherwise any hover anywhere resets every other
+// toast's countdown, so toasts can end up never actually auto-dismissing.
+const pauseDismissTimer = (instanceId: string) => {
+    const timer = dismissalTimers.get(instanceId);
+    if (timer === undefined) return;
+    const deadline = dismissalDeadlines.get(instanceId);
+    clearTimeout(timer);
+    dismissalTimers.delete(instanceId);
+    dismissalDeadlines.delete(instanceId);
+    if (deadline !== undefined) {
+        dismissalRemaining.set(instanceId, Math.max(0, deadline - Date.now()));
+    }
+};
+
+const armDismissTimer = (item: SileoItem, ms: number) => {
+    const timer = globalThis.setTimeout(() => {
+        dismissByInstance(item.instanceId);
+    }, ms);
+    dismissalTimers.set(item.instanceId, timer);
+    dismissalDeadlines.set(item.instanceId, Date.now() + ms);
+};
+
+const resumeDismissTimer = (item: SileoItem) => {
+    const remaining = dismissalRemaining.get(item.instanceId);
+    if (remaining === undefined) return;
+    dismissalRemaining.delete(item.instanceId);
+    armDismissTimer(item, remaining);
 };
 
 const removeByInstance = (instanceId: string) => {
@@ -108,11 +144,7 @@ const scheduleDismiss = (item: SileoItem) => {
     const duration = item.duration ?? DEFAULT_TOAST_DURATION;
     if (duration <= 0) return;
 
-    const timer = globalThis.setTimeout(() => {
-        dismissByInstance(item.instanceId);
-    }, duration);
-
-    dismissalTimers.set(item.instanceId, timer);
+    armDismissTimer(item, duration);
 };
 
 const mergeOptions = (options: SileoOptions): SileoOptions => ({
@@ -204,13 +236,49 @@ const toLifecycleContext = (item: SileoItem): SileoLifecycleContext => ({
     state: item.state,
 });
 
-const resolveTheme = (theme: "light" | "dark" | "system" | undefined) => {
-    if (theme === "light" || theme === "dark") return theme;
+const resolveTheme = (theme: "light" | "dark" | "system" | "custom" | "colored" | undefined) => {
+    if (theme === "light" || theme === "dark" || theme === "custom" || theme === "colored") return theme;
     if (typeof window === "undefined") return "light";
     if (typeof window.matchMedia !== "function") return "light";
     return window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
+};
+
+const COLOR_VAR_MAP: Record<keyof SileoColors, string> = {
+    background: "--sileo-bg-color",
+    foreground: "--sileo-fg-color",
+    description: "--sileo-desc-color",
+    dismissBackground: "--sileo-dismiss-bg",
+    success: "--sileo-state-success",
+    error: "--sileo-state-error",
+    warning: "--sileo-state-warning",
+    info: "--sileo-state-info",
+    action: "--sileo-state-action",
+    loading: "--sileo-state-loading",
+};
+
+const buildColorVars = (colors?: Partial<SileoColors>): Record<string, string> => {
+    if (!colors) return {};
+    const vars: Record<string, string> = {};
+    for (const key of Object.keys(COLOR_VAR_MAP) as (keyof SileoColors)[]) {
+        const value = colors[key];
+        if (value) vars[COLOR_VAR_MAP[key]] = value;
+    }
+    if (colors.dismissBackground) vars["--sileo-dismiss-bg-hover"] = colors.dismissBackground;
+    return vars;
+};
+
+// Darker variants of the root state hues (same hue/chroma, lower lightness) so
+// white foreground text stays readable when a toast's whole fill is colored by
+// its state, the way react-toastify's "colored" theme works.
+const COLORED_FILL: Record<SileoState, string> = {
+    success: "oklch(0.50 0.16 142.136)",
+    error: "oklch(0.45 0.19 25.331)",
+    warning: "oklch(0.55 0.15 86.047)",
+    info: "oklch(0.46 0.15 237.323)",
+    action: "oklch(0.42 0.18 259.815)",
+    loading: "oklch(0.40 0 0)",
 };
 
 const normalizeAutopilot = (
@@ -376,7 +444,8 @@ export interface SileoToasterProps {
     position?: SileoPosition;
     offset?: SileoOffsetValue | SileoOffsetConfig;
     options?: Partial<SileoOptions>;
-    theme?: "light" | "dark" | "system";
+    theme?: "light" | "dark" | "system" | "custom" | "colored";
+    colors?: Partial<SileoColors>;
     container?: string | HTMLElement;
     grouping?: boolean;
     groupThreshold?: number;
@@ -443,7 +512,8 @@ export const Toaster = defineComponent({
             SileoOffsetValue | SileoOffsetConfig
         >,
         options: Object as PropType<Partial<SileoOptions>>,
-        theme: String as PropType<"light" | "dark" | "system">,
+        theme: String as PropType<"light" | "dark" | "system" | "custom" | "colored">,
+        colors: Object as PropType<Partial<SileoColors>>,
         container: [String, Object] as PropType<string | HTMLElement>,
         grouping: { type: Boolean, default: false },
         groupThreshold: { type: Number, default: GROUP_THRESHOLD },
@@ -458,6 +528,17 @@ export const Toaster = defineComponent({
         const expandedToasts = ref<Record<string, boolean>>({});
         const autopilotTimers = new Map<string, ReturnType<typeof setTimeout>[]>();
         const activeToastInstanceId = ref<string | undefined>(undefined);
+
+        // Expanding a toast overlays it on top of its neighbor instead of reflowing the
+        // stack. When it collapses, the browser re-runs hit-testing under the (unmoved)
+        // cursor and can fire a "phantom" mouseenter on the now-exposed neighbor, even
+        // though the user never moved the mouse. Gate hover-driven expand/collapse on a
+        // real, recent pointermove so only genuine hovers count.
+        let lastPointerMoveAt = -Infinity;
+        const trackPointerMove = () => {
+            lastPointerMoveAt = Date.now();
+        };
+        const isGenuineHover = () => Date.now() - lastPointerMoveAt < HOVER_INTENT_WINDOW;
         const contentHeights = ref<Record<string, number>>({});
         const contentRefs = new Map<string, HTMLElement>();
         const contentObservers = new Map<string, ResizeObserver>();
@@ -634,6 +715,9 @@ export const Toaster = defineComponent({
 
         onMounted(() => {
             store.listeners.add(listener);
+            if (typeof window !== "undefined") {
+                window.addEventListener("pointermove", trackPointerMove, { passive: true });
+            }
             if (props.position) store.position = props.position;
             if (props.options) {
                 store.options = {
@@ -646,6 +730,9 @@ export const Toaster = defineComponent({
 
         onBeforeUnmount(() => {
             store.listeners.delete(listener);
+            if (typeof window !== "undefined") {
+                window.removeEventListener("pointermove", trackPointerMove);
+            }
             for (const instanceId of autopilotTimers.keys()) {
                 clearAutopilotTimers(instanceId);
             }
@@ -677,15 +764,27 @@ export const Toaster = defineComponent({
             { deep: true },
         );
 
+        let knownInstanceIds = new Set<string>();
+
         watch(
             () => toasts.value,
             (items) => {
                 const active = new Set(items.map((item) => item.instanceId));
-                const latest = [...items]
-                    .filter((item) => !item.exiting)
-                    .sort((a, b) => b.createdAt - a.createdAt)[0];
 
-                activeToastInstanceId.value = latest?.instanceId;
+                // Only (re-)activate the showcase-peek when a toast is genuinely new.
+                // Reassigning on every mutation — including an unrelated toast's own
+                // dismissal — re-arms the newest toast's autopilot timer and pops it
+                // open again with no user interaction involved.
+                const newlyAdded = items.filter(
+                    (item) => !item.exiting && !knownInstanceIds.has(item.instanceId),
+                );
+                if (newlyAdded.length > 0) {
+                    const latestNew = [...newlyAdded].sort(
+                        (a, b) => b.createdAt - a.createdAt,
+                    )[0];
+                    activeToastInstanceId.value = latestNew.instanceId;
+                }
+                knownInstanceIds = active;
 
                 for (const item of items) {
                     if (expandedToasts.value[item.instanceId] === undefined) {
@@ -770,11 +869,15 @@ export const Toaster = defineComponent({
             const svgH = Math.max(expanded, TOAST_HEIGHT);
 
             const resolvedTheme = resolveTheme(props.theme);
-            const fillColor = item.fill ?? (resolvedTheme === 'dark' ? '#1a1a1a' : '#f2f2f2');
+            const fillColor =
+                item.fill ??
+                props.colors?.background ??
+                (resolvedTheme === 'colored'
+                    ? props.colors?.[item.state] ?? COLORED_FILL[item.state]
+                    : resolvedTheme === 'dark' ? '#1a1a1a' : '#f2f2f2');
             const filterId = `sileo-gooey-${item.instanceId.replace(/[^a-z0-9]/gi, '-')}`;
 
             const rootStyle: CSSProperties & Record<string, string> = {
-                '--_h': `${isOpen ? expanded : TOAST_HEIGHT}px`,
                 '--_pw': `${resolvedPillWidth}px`,
                 '--_px': `${pillX}px`,
                 '--_ht': `translateY(${isOpen ? (expandDir === 'bottom' ? 3 : -3) : 0}px) scale(${isOpen ? 0.9 : 1})`,
@@ -806,15 +909,16 @@ export const Toaster = defineComponent({
                     class: item.styles?.toast,
                     style: rootStyle,
                     onMouseenter: () => {
+                        if (!isGenuineHover()) return;
                         activeToastInstanceId.value = item.instanceId;
                         setExpanded(item.instanceId, true);
                     },
                     onMouseleave: () => {
+                        if (!isGenuineHover()) return;
                         const autopilot = normalizeAutopilot(item.autopilot);
-                        const latest = [...toasts.value]
-                            .filter((toast) => !toast.exiting)
-                            .sort((a, b) => b.createdAt - a.createdAt)[0];
-                        activeToastInstanceId.value = latest?.instanceId;
+                        if (activeToastInstanceId.value === item.instanceId) {
+                            activeToastInstanceId.value = undefined;
+                        }
                         if (autopilot !== null) setExpanded(item.instanceId, false);
                     },
                     onPointerdown: (e: PointerEvent) => {
@@ -1076,15 +1180,15 @@ export const Toaster = defineComponent({
                     "aria-live": props.ariaLive,
                     "aria-atomic": "true",
                     role: "status",
-                    style: getOffsetStyle(position, props.offset),
+                    style: { ...getOffsetStyle(position, props.offset), ...buildColorVars(props.colors) },
                     onMouseenter: () => {
                         for (const item of liveItemsForPosition()) {
-                            clearTimer(item.instanceId);
+                            pauseDismissTimer(item.instanceId);
                         }
                     },
                     onMouseleave: () => {
                         for (const item of liveItemsForPosition()) {
-                            scheduleDismiss(item);
+                            resumeDismissTimer(item);
                         }
                     },
                 },

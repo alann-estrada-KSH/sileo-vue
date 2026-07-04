@@ -16,6 +16,19 @@ export interface SileoStyles {
 	toast?: string;
 }
 
+export interface SileoColors {
+	background?: string;
+	foreground?: string;
+	description?: string;
+	dismissBackground?: string;
+	success?: string;
+	error?: string;
+	warning?: string;
+	info?: string;
+	action?: string;
+	loading?: string;
+}
+
 export interface SileoButton {
 	title: string;
 	onClick?: () => void;

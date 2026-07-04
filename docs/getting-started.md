@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-npm install @alann-estrada-KSH/sileo-vue
+npm install @alann-estrada-ksh/sileo-vue
 ```
 
 If you are developing inside this repository, use the local example app:
@@ -18,7 +18,7 @@ npm run example:dev
 Import the runtime and render the toaster once in your app shell.
 
 ```ts
-import { sileo, Toaster } from "@alann-estrada-KSH/sileo-vue";
+import { sileo, Toaster } from "@alann-estrada-ksh/sileo-vue";
 ```
 
 ```vue
@@ -28,7 +28,7 @@ import { sileo, Toaster } from "@alann-estrada-KSH/sileo-vue";
 </template>
 
 <script setup lang="ts">
-import { sileo, Toaster } from "@alann-estrada-KSH/sileo-vue";
+import { sileo, Toaster } from "@alann-estrada-ksh/sileo-vue";
 
 const notify = () => {
   sileo.info({
@@ -48,7 +48,7 @@ const notify = () => {
 
 ## Importing CSS
 
-Sileo ships its styles separately. Include them once at app bootstrap:
+sileo-vue ships its styles separately. Include them once at app bootstrap:
 
 ```ts
 import "sileo/styles.css";

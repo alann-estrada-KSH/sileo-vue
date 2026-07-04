@@ -1,14 +1,18 @@
 <div align="center">
-  <h1>Sileo</h1>
+  <h1>sileo-vue</h1>
   <p>An opinionated toast component for Vue.</p>
-  <p><a href="https://sileo.aaryan.design">Try Out</a> &nbsp; / &nbsp; <a href="https://sileo.aaryan.design/docs">Docs</a></p>
+  <p><a href="https://alann-estrada-ksh.github.io/sileo-vue/">Try Out</a> &nbsp; / &nbsp; <a href="docs/index.md">Docs</a></p>
   <video src="https://github.com/user-attachments/assets/a292d310-9189-490a-9f9d-d0a1d09defce"></video>
 </div>
+
+### Credits
+
+sileo-vue is an improved fork of [Sileo](https://github.com/hiaaryan/sileo) by [@hiaaryan](https://github.com/hiaaryan), which was originally built for React. This is an independent Vue 3 implementation, extended beyond the original's scope with grouping/stacking, promise-driven lifecycles, swipe-to-dismiss, lifecycle hooks, per-field custom color theming (including a toastify-style `colored` theme), and accessibility controls.
 
 ### Installation
 
 ```bash
-npm i sileo
+npm i @alann-estrada-ksh/sileo-vue
 ```
 
 ### Documentation
@@ -35,10 +39,21 @@ npm run example:dev
 
 The example lives in `example/` and imports the package from local source so you can validate animations, icons, grouping, promise flow, swipe behavior, hooks and accessibility without publishing.
 
+### Landing Page
+
+A promotional site with a live playground, feature overview, and documentation links lives in `landing/`:
+
+```bash
+npm run landing:install
+npm run landing:dev
+```
+
+It's deployed to GitHub Pages automatically on every push to `main` that touches `landing/` or `src/` (see `.github/workflows/deploy-landing.yml`). Enable Pages under repo Settings → Pages → Source: "GitHub Actions" for the first deploy to take effect.
+
 ### Getting Started
 
 ```ts
-import { sileo, Toaster } from "@alann-estrada-KSH/sileo-vue";
+import { sileo, Toaster } from "@alann-estrada-ksh/sileo-vue";
 ```
 
 ```ts
@@ -73,6 +88,32 @@ To avoid notification overload, `Toaster` can group bursts of toasts:
 ```vue
 <Toaster :grouping="true" :group-threshold="3" />
 ```
+
+### Custom Colors
+
+Every color the toast uses can be overridden per-field, on any theme:
+
+```vue
+<Toaster
+  theme="custom"
+  :colors="{
+    background: '#1b1030',
+    foreground: '#f4e9ff',
+    success: '#7dffb3',
+    error: '#ff6b81',
+  }"
+/>
+```
+
+See [Styling and Theming](docs/styling.md) for the full `SileoColors` reference, or run the local example and switch to the "custom" theme to try it with live color pickers.
+
+Prefer a toastify-style look where each toast is filled with its own state color? Use `theme="colored"`:
+
+```vue
+<Toaster theme="colored" />
+```
+
+`colors` still composes on top — override just one state (`:colors="{ success: '#059669' }"`) or set `colors.background` to flatten every state to one brand color while keeping the light-foreground styling.
 
 ### Render In Custom Container
 
@@ -141,4 +182,4 @@ sileo.action({
 });
 ```
 
-For detailed docs, click here: https://sileo.aaryan.design
+For detailed docs, click here: https://alann-estrada-ksh.github.io/sileo-vue/

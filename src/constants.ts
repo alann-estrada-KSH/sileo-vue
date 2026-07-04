@@ -10,3 +10,4 @@ export const TOAST_WIDTH = 350;
 export const BLUR_RATIO = 0.5;
 export const PILL_PADDING = 10;
 export const MIN_EXPAND_RATIO = 2.25;
+export const HOVER_INTENT_WINDOW = 60;
