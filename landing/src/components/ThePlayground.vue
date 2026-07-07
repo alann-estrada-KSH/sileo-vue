@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { Toaster, sileo } from "@alann-estrada-ksh/sileo-vue";
 import { t } from "../i18n";
 import { pageTheme } from "../theme";
@@ -8,6 +8,23 @@ import { pageTheme } from "../theme";
 // page chrome, but starting from whichever the page is currently in reads as
 // more intentional than always defaulting to dark.
 const demoTheme = ref<"dark" | "light" | "colored">(pageTheme.value);
+
+// The site nav is `position: relative` (scrolls away with the page), while
+// the toast viewport is always `position: fixed`. A static top offset large
+// enough to clear the nav at scrollY 0 looks needlessly low once the nav has
+// scrolled out of view. Shrink the offset as the page scrolls so it only
+// clears the nav while the nav is actually on screen.
+const NAV_CLEARANCE = 104;
+const DEFAULT_OFFSET = 12;
+const scrollY = ref(typeof window === "undefined" ? 0 : window.scrollY);
+const onScroll = () => {
+    scrollY.value = window.scrollY;
+};
+onMounted(() => window.addEventListener("scroll", onScroll, { passive: true }));
+onUnmounted(() => window.removeEventListener("scroll", onScroll));
+const toasterOffset = computed(() => ({
+    top: Math.max(DEFAULT_OFFSET, NAV_CLEARANCE - scrollY.value),
+}));
 
 const fireSuccess = () => {
     const m = t("playground").toasts;
@@ -133,7 +150,7 @@ sileo.promise(deploy(), {
             :theme="demoTheme"
             :grouping="true"
             :group-threshold="3"
-            :offset="{ top: 104 }"
+            :offset="toasterOffset"
             :options="{ autopilot: { expand: 180, collapse: 3200 } }"
         />
     </section>
