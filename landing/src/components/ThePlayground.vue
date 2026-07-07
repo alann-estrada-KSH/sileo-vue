@@ -19,6 +19,16 @@ const fireError = () => {
     sileo.error({ title: m.errorTitle, description: m.errorDesc });
 };
 
+const fireWarning = () => {
+    const m = t("playground").toasts;
+    sileo.warning({ title: m.warningTitle, description: m.warningDesc });
+};
+
+const fireInfo = () => {
+    const m = t("playground").toasts;
+    sileo.info({ title: m.infoTitle, description: m.infoDesc });
+};
+
 const fireAction = () => {
     const m = t("playground").toasts;
     sileo.action({
@@ -52,6 +62,8 @@ const fireCustom = () => {
 const actions = computed(() => [
     { label: t("playground").btnSuccess, run: fireSuccess },
     { label: t("playground").btnError, run: fireError },
+    { label: t("playground").btnWarning, run: fireWarning },
+    { label: t("playground").btnInfo, run: fireInfo },
     { label: t("playground").btnAction, run: fireAction },
     { label: t("playground").btnPromise, run: firePromise },
     { label: t("playground").btnGroup, run: fireGroup },
@@ -121,6 +133,7 @@ sileo.promise(deploy(), {
             :theme="demoTheme"
             :grouping="true"
             :group-threshold="3"
+            :offset="{ top: 104 }"
             :options="{ autopilot: { expand: 180, collapse: 3200 } }"
         />
     </section>

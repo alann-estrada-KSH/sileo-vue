@@ -57,6 +57,8 @@ interface Messages {
         lede: string;
         btnSuccess: string;
         btnError: string;
+        btnWarning: string;
+        btnInfo: string;
         btnAction: string;
         btnPromise: string;
         btnGroup: string;
@@ -70,6 +72,10 @@ interface Messages {
             successDesc: string;
             errorTitle: string;
             errorDesc: string;
+            warningTitle: string;
+            warningDesc: string;
+            infoTitle: string;
+            infoDesc: string;
             actionTitle: string;
             actionDesc: string;
             actionButton: string;
@@ -119,6 +125,8 @@ const messages: Record<Locale, Messages> = {
             lede: "These buttons call the exact same API shown in the snippets below. Fire a few at once to see grouping and the gooey expand animation kick in.",
             btnSuccess: "success",
             btnError: "error",
+            btnWarning: "warning",
+            btnInfo: "info",
             btnAction: "action + button",
             btnPromise: "promise flow",
             btnGroup: "grouped burst",
@@ -132,6 +140,10 @@ const messages: Record<Locale, Messages> = {
                 successDesc: "All containers are healthy.",
                 errorTitle: "Sync failed",
                 errorDesc: "Retrying in 30 seconds.",
+                warningTitle: "Quota almost full",
+                warningDesc: "You're at 92% of your plan.",
+                infoTitle: "Nightly backup",
+                infoDesc: "Completed 3 minutes ago.",
                 actionTitle: "New comment",
                 actionDesc: "Someone replied on your thread.",
                 actionButton: "Open",
@@ -249,6 +261,8 @@ const messages: Record<Locale, Messages> = {
             lede: "Estos botones llaman exactamente a la misma API que ves en los fragmentos de abajo. Dispara varios a la vez para ver la agrupación y la animación gooey en acción.",
             btnSuccess: "éxito",
             btnError: "error",
+            btnWarning: "advertencia",
+            btnInfo: "info",
             btnAction: "acción + botón",
             btnPromise: "flujo de promesa",
             btnGroup: "ráfaga agrupada",
@@ -262,6 +276,10 @@ const messages: Record<Locale, Messages> = {
                 successDesc: "Todos los contenedores están saludables.",
                 errorTitle: "Sincronización fallida",
                 errorDesc: "Reintentando en 30 segundos.",
+                warningTitle: "Cuota casi al límite",
+                warningDesc: "Estás al 92% de tu plan.",
+                infoTitle: "Respaldo nocturno",
+                infoDesc: "Completado hace 3 minutos.",
                 actionTitle: "Nuevo comentario",
                 actionDesc: "Alguien respondió en tu hilo.",
                 actionButton: "Abrir",

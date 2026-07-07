@@ -324,14 +324,25 @@ const renderStateIcon = (state: SileoState) => {
         ]);
     }
     if (state === "error") {
+        // An exclamation mark in a circle, not an X — an X reads as a close/dismiss
+        // affordance and gets confused with the actual dismiss button next to it.
         return h("svg", common, [
-            h("path", {
-                d: "M5 5L11 11M11 5L5 11",
+            h("circle", {
+                cx: "8",
+                cy: "8",
+                r: "5.2",
                 fill: "none",
                 stroke: "currentColor",
-                "stroke-width": "1.8",
+                "stroke-width": "1.6",
+            }),
+            h("path", {
+                d: "M8 5V9",
+                fill: "none",
+                stroke: "currentColor",
+                "stroke-width": "1.6",
                 "stroke-linecap": "round",
             }),
+            h("circle", { cx: "8", cy: "11", r: "0.9", fill: "currentColor" }),
         ]);
     }
     if (state === "warning") {
