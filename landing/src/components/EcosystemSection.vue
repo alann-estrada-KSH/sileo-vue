@@ -5,7 +5,7 @@ import { t } from "../i18n";
 // translated copy — mirrors the SPANS pattern in FeatureGrid.vue.
 const LINKS = [
     { href: null, highlight: true },
-    { href: "https://github.com/alann-estrada-KSH/sileo-flutter", highlight: false },
+    { href: "https://pub.dev/packages/sileo_flutter", highlight: false },
 ];
 
 const items = () => t("ecosystem").items.map((item, i) => ({ ...item, ...LINKS[i] }));
