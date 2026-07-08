@@ -273,7 +273,7 @@
 }
 
 [data-sileo-content][data-edge="top"] {
-    top: 0;
+    bottom: var(--sileo-height);
 }
 
 [data-sileo-content][data-edge="bottom"] {
