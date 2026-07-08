@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute } from "vue-router";
-import { t } from "../i18n";
+import { t, locale } from "../i18n";
 import { DOCS, DEFAULT_SLUG, findDoc } from "../docs-content";
 import { renderMarkdown } from "../lib/renderMarkdown";
 
@@ -9,7 +9,7 @@ const route = useRoute();
 
 const activeSlug = computed(() => (typeof route.params.slug === "string" ? route.params.slug : DEFAULT_SLUG));
 const activeDoc = computed(() => findDoc(activeSlug.value));
-const renderedHtml = computed(() => renderMarkdown(activeDoc.value.raw));
+const renderedHtml = computed(() => renderMarkdown(activeDoc.value.raw[locale.value]));
 
 const pageMeta = (slug: string) => t("docsPage").pages[slug];
 

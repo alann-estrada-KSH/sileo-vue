@@ -91,7 +91,20 @@ interface Messages {
         };
     };
     features: { eyebrow: string; title: string; items: Feature[] };
+    ecosystem: {
+        eyebrow: string;
+        title: string;
+        lede: string;
+        items: { name: string; tag: string; body: string; cta: string }[];
+    };
     docs: { eyebrow: string; title: string; items: DocLink[] };
+    community: {
+        eyebrow: string;
+        title: string;
+        body: string;
+        issuesCta: string;
+        discussionsCta: string;
+    };
     docsPage: {
         backHome: string;
         viewOnGithub: string;
@@ -204,6 +217,25 @@ const messages: Record<Locale, Messages> = {
                 },
             ],
         },
+        ecosystem: {
+            eyebrow: "same manners, more frameworks",
+            title: "One toast philosophy, ported natively.",
+            lede: "Every port keeps the same gooey pill, the same imperative API shape, and the same grouping/promise/theming model — just idiomatic to its own framework, not a wrapper around this one.",
+            items: [
+                {
+                    name: "sileo-vue",
+                    tag: "this repo · Vue 3",
+                    body: "The original implementation. Composition API, teleported viewport, full color theming.",
+                    cta: "You're looking at it ↓",
+                },
+                {
+                    name: "sileo_flutter",
+                    tag: "Flutter · pub.dev",
+                    body: "Pure Dart/Flutter port — no platform channels. Same gooey-pill silhouette, grouping, and promise flow, native on Android, iOS, web, and desktop.",
+                    cta: "View sileo_flutter on GitHub ↗",
+                },
+            ],
+        },
         docs: {
             eyebrow: "read more",
             title: "Documentation",
@@ -215,6 +247,13 @@ const messages: Record<Locale, Messages> = {
                 { title: "Advanced Features", desc: "Grouping, hooks, containers, and more." },
                 { title: "Migration Guide", desc: "Coming from another toast library." },
             ],
+        },
+        community: {
+            eyebrow: "get help",
+            title: "Found a bug? Missing something?",
+            body: "sileo-vue is maintained in the open. Bug reports, feature requests, and questions all go through GitHub Issues — that's the fastest way to reach a real answer.",
+            issuesCta: "Open an issue ↗",
+            discussionsCta: "Browse existing issues ↗",
         },
         docsPage: {
             backHome: "← Back to home",
@@ -340,6 +379,25 @@ const messages: Record<Locale, Messages> = {
                 },
             ],
         },
+        ecosystem: {
+            eyebrow: "mismos modales, más frameworks",
+            title: "Una sola filosofía de notificaciones, portada nativamente.",
+            lede: "Cada port mantiene la misma píldora gooey, la misma forma de API imperativa, y el mismo modelo de agrupación/promesas/temas — pero idiomático a su propio framework, no un wrapper alrededor de este.",
+            items: [
+                {
+                    name: "sileo-vue",
+                    tag: "este repo · Vue 3",
+                    body: "La implementación original. Composition API, viewport con teleport, temas de color completos.",
+                    cta: "Lo estás viendo ↓",
+                },
+                {
+                    name: "sileo_flutter",
+                    tag: "Flutter · pub.dev",
+                    body: "Port en Dart/Flutter puro — sin platform channels. Misma silueta de píldora gooey, agrupación y flujo de promesas, nativo en Android, iOS, web y escritorio.",
+                    cta: "Ver sileo_flutter en GitHub ↗",
+                },
+            ],
+        },
         docs: {
             eyebrow: "leer más",
             title: "Documentación",
@@ -351,6 +409,13 @@ const messages: Record<Locale, Messages> = {
                 { title: "Funciones avanzadas", desc: "Agrupación, hooks, contenedores y más." },
                 { title: "Guía de migración", desc: "Si vienes de otra librería de notificaciones." },
             ],
+        },
+        community: {
+            eyebrow: "obtén ayuda",
+            title: "¿Encontraste un bug? ¿Falta algo?",
+            body: "sileo-vue se mantiene de forma abierta. Reportes de bugs, solicitudes de funciones y preguntas pasan todos por GitHub Issues — es la forma más rápida de llegar a una respuesta real.",
+            issuesCta: "Abrir un issue ↗",
+            discussionsCta: "Ver issues existentes ↗",
         },
         docsPage: {
             backHome: "← Volver al inicio",
