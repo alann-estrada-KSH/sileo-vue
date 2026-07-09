@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an addition or change to sileo-vue.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If this is a feature that should exist across the whole family, consider also opening it on [sileo-flutter](https://github.com/alann-estrada-KSH/sileo-flutter/issues) so both ports stay in sync.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What are you trying to do that sileo-vue doesn't support today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API / behavior
+      description: Sketch the prop, option, or method you'd expect. Doesn't need to be final.
+      placeholder: |
+        ```ts
+        sileo.success({
+          title: "...",
+          newOption: true,
+        });
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you're currently using, or other libraries that do this.
+    validations:
+      required: false

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Flutter port (sileo_flutter) issues
+    url: https://github.com/alann-estrada-KSH/sileo-flutter/issues
+    about: Bug reports and feature requests for the Flutter port belong on that repo.
+  - name: Original React library (sileo) issues
+    url: https://github.com/hiaaryan/sileo/issues
+    about: sileo-vue is an independent rebuild — issues with the original React library belong there.
+  - name: Docs site / landing page
+    url: https://github.com/alann-estrada-KSH/sileo-notifications/issues
+    about: Bugs in the docs site or landing page itself (not the library) live in the sileo-notifications repo.

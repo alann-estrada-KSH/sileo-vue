@@ -1,7 +1,7 @@
 <div align="center">
   <h1>sileo-vue</h1>
   <p>An opinionated toast component for Vue.</p>
-  <p><a href="https://alann-estrada-ksh.github.io/sileo-vue/">Try Out</a> &nbsp; / &nbsp; <a href="docs/index.md">Docs</a></p>
+  <p><a href="https://alann-estrada-ksh.github.io/sileo-notifications/">Try Out</a> &nbsp; / &nbsp; <a href="docs/index.md">Docs</a></p>
   <video src="https://github.com/user-attachments/assets/a292d310-9189-490a-9f9d-d0a1d09defce"></video>
 </div>
 
@@ -41,14 +41,7 @@ The example lives in `example/` and imports the package from local source so you
 
 ### Landing Page
 
-A promotional site with a live playground, feature overview, and documentation links lives in `landing/`:
-
-```bash
-npm run landing:install
-npm run landing:dev
-```
-
-It's deployed to GitHub Pages automatically on every push to `main` that touches `landing/` or `src/` (see `.github/workflows/deploy-landing.yml`). Enable Pages under repo Settings → Pages → Source: "GitHub Actions" for the first deploy to take effect.
+The promotional site (live playground, feature overview, docs viewer with a Vue/Flutter framework switcher) lives in its own repo: [sileo-notifications](https://github.com/alann-estrada-KSH/sileo-notifications), deployed at https://alann-estrada-ksh.github.io/sileo-notifications/. It vendors copies of this repo's `docs/` — see that repo's `content/README.md` for the sync process.
 
 ### Getting Started
 
@@ -182,4 +175,4 @@ sileo.action({
 });
 ```
 
-For detailed docs, click here: https://alann-estrada-ksh.github.io/sileo-vue/
+For detailed docs, click here: https://alann-estrada-ksh.github.io/sileo-notifications/

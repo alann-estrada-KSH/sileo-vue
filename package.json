@@ -32,10 +32,7 @@
 		"test": "vitest run",
 		"example:install": "npm --prefix example install",
 		"example:dev": "npm --prefix example run dev",
-		"example:build": "npm --prefix example run build",
-		"landing:install": "npm --prefix landing install",
-		"landing:dev": "npm --prefix landing run dev",
-		"landing:build": "npm --prefix landing run build"
+		"example:build": "npm --prefix example run build"
 	},
 	"peerDependencies": {
 		"vue": ">=3"
