@@ -13,6 +13,10 @@ npm run example:install
 npm run example:dev
 ```
 
+### Sin bundler
+
+¿No usas npm/Vite/webpack? sileo-vue también está publicado en jsDelivr — tráelo directo desde el CDN: https://www.jsdelivr.com/package/npm/@alann-estrada-ksh/sileo-vue
+
 ## Configuración básica
 
 Importa el runtime y renderiza el toaster una sola vez en el shell de tu app.
