@@ -79,7 +79,7 @@ describe("sileo", () => {
         sileo.info({ title: "Test data test", duration: null });
         await flush();
 
-        const title = document.querySelector(".sileo-title");
+        const title = document.querySelector("[data-sileo-title='true']");
         expect(title?.textContent).toBe("Test data test");
     });
 
@@ -156,7 +156,7 @@ describe("sileo", () => {
         vi.advanceTimersByTime(EXIT_DURATION + 1);
         await flush();
 
-        const titles = Array.from(document.querySelectorAll(".sileo-title")).map(
+        const titles = Array.from(document.querySelectorAll("[data-sileo-title='true']")).map(
             (el) => el.textContent,
         );
         expect(titles).toContain("Second");
@@ -243,7 +243,7 @@ describe("sileo", () => {
         });
         await flush();
 
-        const firstTitle = Array.from(document.querySelectorAll(".sileo-title")).find(
+        const firstTitle = Array.from(document.querySelectorAll("[data-sileo-title='true']")).find(
             (el) => el.textContent === "First",
         );
         const firstToast = firstTitle?.closest("[data-sileo-toast='true']") as HTMLElement | null;
@@ -263,7 +263,7 @@ describe("sileo", () => {
         });
         await flush();
 
-        const titles = Array.from(document.querySelectorAll(".sileo-title")).map(
+        const titles = Array.from(document.querySelectorAll("[data-sileo-title='true']")).map(
             (el) => el.textContent,
         );
         expect(titles).toContain("Success ok");
@@ -532,5 +532,36 @@ describe("sileo", () => {
             el.getAttribute("fill"),
         );
         expect(fills).toEqual(["#101010", "#101010"]);
+    });
+    it("drops toasts cleared by a sibling between Toaster setup and mount", async () => {
+        sileo.info({ title: "Stale", duration: null });
+
+        const Clearer = {
+            setup() {
+                sileo.clear();
+                return () => null;
+            },
+        };
+        const wrapper = mount(
+            { render: () => [h(Toaster), h(Clearer)] },
+            { attachTo: document.body },
+        );
+        mountedWrappers.push(wrapper);
+        await flush();
+
+        expect(document.querySelectorAll("[data-sileo-toast='true']")).toHaveLength(0);
+    });
+
+    it("sizes the gooey filter from the blur and applies it to the shapes group", async () => {
+        mountToaster();
+        sileo.info({ title: "Goo", duration: null });
+        await flush();
+
+        const filter = document.querySelector("filter");
+        expect(filter?.getAttribute("filterUnits")).toBe("userSpaceOnUse");
+        expect(document.querySelector("feColorMatrix")?.getAttribute("type")).toBe("matrix");
+        const group = document.querySelector("g[filter]");
+        expect(group?.querySelector("[data-sileo-pill='true']")).not.toBeNull();
+        expect(group?.querySelector("[data-sileo-body='true']")).not.toBeNull();
     });
 });

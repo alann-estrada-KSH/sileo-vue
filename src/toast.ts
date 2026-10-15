@@ -50,6 +50,10 @@ type AutopilotConfig = {
 
 type Listener = (toasts: SileoItem[]) => void;
 
+// Margin around the gooey filter region, in multiples of the blur's stdDeviation,
+// so the filter clips exactly where the blur visually fades out instead of a fixed %.
+const GOOEY_REGION_SIGMA = 2;
+
 const store = {
     toasts: [] as SileoItem[],
     listeners: new Set<Listener>(),
@@ -726,6 +730,10 @@ export const Toaster = defineComponent({
 
         onMounted(() => {
             store.listeners.add(listener);
+            // Re-read on subscribing: `toasts` was seeded during setup(), before this
+            // component was listening, so a store write in that gap (e.g. a route change
+            // clearing toasts) is missed and the stale snapshot sticks around.
+            toasts.value = [...store.toasts];
             if (typeof window !== "undefined") {
                 window.addEventListener("pointermove", trackPointerMove, { passive: true });
             }
@@ -987,7 +995,6 @@ export const Toaster = defineComponent({
                     h("div", {
                         "data-sileo-canvas": "true",
                         "data-edge": expandDir,
-                        style: { filter: `url(#${filterId})` } as CSSProperties,
                     }, [
                         h("svg", {
                             "data-sileo-svg": "true",
@@ -998,13 +1005,15 @@ export const Toaster = defineComponent({
                             "aria-hidden": "true",
                             focusable: "false",
                         }, [
+                            h("title", {}, "sileo notification"),
                             h("defs", {}, [
                                 h("filter", {
                                     id: filterId,
-                                    x: "-20%",
-                                    y: "-20%",
-                                    width: "140%",
-                                    height: "140%",
+                                    filterUnits: "userSpaceOnUse",
+                                    x: String(-(blur * GOOEY_REGION_SIGMA)),
+                                    y: String(-(blur * GOOEY_REGION_SIGMA)),
+                                    width: String(TOAST_WIDTH + blur * GOOEY_REGION_SIGMA * 2),
+                                    height: String(svgH + blur * GOOEY_REGION_SIGMA * 2),
                                     "color-interpolation-filters": "sRGB",
                                 }, [
                                     h("feGaussianBlur", {
@@ -1014,7 +1023,7 @@ export const Toaster = defineComponent({
                                     }),
                                     h("feColorMatrix", {
                                         in: "blur",
-                                        mode: "matrix",
+                                        type: "matrix",
                                         values: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10",
                                         result: "goo",
                                     }),
@@ -1025,29 +1034,31 @@ export const Toaster = defineComponent({
                                     }),
                                 ]),
                             ]),
-                            h("rect", {
-                                "data-sileo-pill": "true",
-                                rx: String(r),
-                                ry: String(r),
-                                fill: fillColor,
-                                style: {
-                                    x: `${pillX}px`,
-                                    width: `${resolvedPillWidth}px`,
-                                    height: `${isOpen ? pillH : TOAST_HEIGHT}px`,
-                                } as CSSProperties,
-                            }),
-                            h("rect", {
-                                "data-sileo-body": "true",
-                                width: String(TOAST_WIDTH),
-                                rx: String(r),
-                                ry: String(r),
-                                fill: fillColor,
-                                style: {
-                                    y: `${TOAST_HEIGHT}px`,
-                                    height: `${isOpen ? expandedContent : 0}px`,
-                                    opacity: isOpen ? "1" : "0",
-                                } as CSSProperties,
-                            }),
+                            h("g", { filter: `url(#${filterId})` }, [
+                                h("rect", {
+                                    "data-sileo-pill": "true",
+                                    rx: String(r),
+                                    ry: String(r),
+                                    fill: fillColor,
+                                    style: {
+                                        x: `${pillX}px`,
+                                        width: `${resolvedPillWidth}px`,
+                                        height: `${isOpen ? pillH : TOAST_HEIGHT}px`,
+                                    } as CSSProperties,
+                                }),
+                                h("rect", {
+                                    "data-sileo-body": "true",
+                                    width: String(TOAST_WIDTH),
+                                    rx: String(r),
+                                    ry: String(r),
+                                    fill: fillColor,
+                                    style: {
+                                        y: `${TOAST_HEIGHT}px`,
+                                        height: `${isOpen ? expandedContent : 0}px`,
+                                        opacity: isOpen ? "1" : "0",
+                                    } as CSSProperties,
+                                }),
+                            ]),
                         ]),
                     ]),
 
